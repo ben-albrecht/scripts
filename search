@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Searches source files for the pattern specified as first argument.
+# Additional options to grep can be given before the pattern, e.g.
+#  $ search -i "print"
+#
+# $Version$   $Date$
+# $Author$
+
+# program we're using for grepping
+GREP='fgrep -H'
+
+# search for the following suffices
+declare suffix="h hh F f C c cpp S s"
+
+echo -ne "\033]30;searching ...\007"
+echo -e "\033[1;31m>>> $GREP \"$@\" in *.[$suffix]:\033[0m"
+for s in $suffix; do
+  find . -follow -name "*.$s" -exec $GREP -HI "$@" {} \; 2> /dev/null
+done
