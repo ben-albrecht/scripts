@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Simplified Build script for Q-Chem with various options 
+# Must have a qchem module loaded
+
+if [[ -z $QC ]] ; then           # evaluates as true if $QC is not set
+  echo "\$QC is not set!"
+  echo " Try: \`load module qchem/[QC_build]\`"
+else
+  if [[ $# -eq 0 ]] ; then
+    echo "make -j2"
+    cd $QC/build
+    make -j2
+  else    
+
+    case "$1" in 
+      *)   
+        echo "./configure intel release mkl openmp"
+        echo "optimization = 0"
+        echo "make generated_headers"
+        echo "make -j2"
+        echo "link qcprog.exe, and cronutils"
+
+        cd $QC
+        
+        ./configure intel release mkl openmp
+        
+        cd $QC/build
+        
+        sed -i -e 's/-O2/-O0/g' $QC/build/CMakeCache.txt
+        sed -i -e 's/-O3/-O0/g' $QC/build/CMakeCache.txt
+        
+        make generated_headers
+        make -j2
+        
+        mkdir $QC/exe 2> /dev/null
+        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
+        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
+        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe 
+        ;;
+    esac
+  fi
+fi
