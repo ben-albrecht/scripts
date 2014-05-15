@@ -42,6 +42,10 @@ else
         ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
         ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe 
         ;;
+      help)
+        echo "dev : ./configure intel nointracule nomgc noopt2 nonewpath2 debug mkl"
+        echo "* : ./configure intel release mkl openmp"
+        ;;
       *)   
         echo "./configure intel release mkl openmp"
         echo "optimization = 0"
