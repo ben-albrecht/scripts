@@ -9,3 +9,8 @@ do
     echo ${repo}
     (cd "${repo}" && git checkout master && git up)
 done
+
+# .dotfiles
+repo=$HOME/.dotfiles
+echo $repo
+(cd "${repo}" && git checkout master && git up)
