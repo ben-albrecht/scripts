@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Little bash script to git up all repositories in $HOME/repos
+
+cd $HOME/repos
+
+for repo in `find . -mindepth 1 -maxdepth 1 -type d`
+do
+    echo ${repo}
+    (cd "${repo}" && git checkout master && git up)
+done
