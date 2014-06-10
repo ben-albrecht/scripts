@@ -1,0 +1,6 @@
+#!/bin/bash 
+PDB_ID=$1
+
+wget http://www.rcsb.org/pdb/files/$PDB_ID.pdb.gz &
+wait $2
+gunzip $PDB_ID.pdb.gz
