@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for input in *.in; do
+    output=`echo $input | sed 's/\.in/\.out/' `
+    nohup qchem $input > $output &
+done
