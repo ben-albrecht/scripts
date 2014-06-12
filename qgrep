@@ -5,15 +5,25 @@
 
 
 # True if length of  string is zero
-if [ -z $1 ]; then
-    echo "SCF Energies:"
-    grep "Convergence criterion met" *.out | awk '{print $1, $3}'
-    echo "CCSD(T) Energies:"
-    grep "CCSD total energy" *.out | awk '{print $1, $6}'
-else
-    echo "SCF Energies:"
-    grep "Convergence criterion met" $1 | awk '{print $1, $3}'
-    echo "CCSD(T) Energies:"
-    grep "CCSD total energy" $1 | awk '{print $1, $6}'
-fi
 
+if [ -z $1 ]; then
+    target="*.out"
+else
+    target=$1
+fi
+    scf=`grep "Convergence criterion met" $target | awk '{print $1}' | head -1`
+    ccsdt=`grep "CCSD total energy" $target | awk '{print $1}' | head -1`
+    mp2=`grep "MP2         total energy" $target | awk '{print $1}' | head -1`
+
+if [ ! -z $scf ]; then
+    echo "SCF Energies:"
+    grep "Convergence criterion met" $target | awk '{print $1, $3}'
+fi
+if [ ! -z $ccsdt ]; then
+    grep "CCSD total energy" $target | awk '{print $1, $6}'
+    echo "CCSD Energies:" 
+fi
+if [ ! -z $mp2 ]; then
+    echo "MP2 Energies:" 
+    grep "MP2         total energy" $target | awk '{print $1, $6}'
+fi
