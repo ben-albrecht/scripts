@@ -6,13 +6,14 @@
 
 # True if length of  string is zero
 if [ -z $1 ]; then
+    echo "SCF Energies:"
     grep "Convergence criterion met" *.out | awk '{print $1, $3}'
-    grep "CCSD(T) total energy" *.out | awk '{print $1, $6}'
+    echo "CCSD(T) Energies:"
+    grep "CCSD total energy" *.out | awk '{print $1, $6}'
 else
-    echo "SCF Energies"
+    echo "SCF Energies:"
     grep "Convergence criterion met" $1 | awk '{print $1, $3}'
-    echo "CCSD(T) Energies"
-    grep "CCSD(T) total energy" $1 | awk '{print $1, $6}'
+    echo "CCSD(T) Energies:"
+    grep "CCSD total energy" $1 | awk '{print $1, $6}'
 fi
-
 
