@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Script to modify and write the pwd to xclip such that it 
+#   can be used to wget locally quickly
+# http://lambrecht.chem.pitt.edu/~ben/
+
+
+
+
+command=`pwd | grep home/ben/calcs`
+
+if [[ -z $command  ]] ; then
+    echo "home/ben/calcs not in pwd, assuming on localhost"
+    exit 1;
+else
+
+    if [[ $# -eq 0 ]] ; then
+        pwd | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/'
+        pwd | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
+    else    
+        echo "`pwd`/$1" | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/'
+        echo "`pwd`/$1" | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
+    fi
+
+fi
+
