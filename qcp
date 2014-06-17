@@ -7,20 +7,41 @@
 
 
 
-command=`pwd | grep home/ben/calcs`
+command=`pwd -P | grep home/ben/calcs`
 
 if [[ -z $command  ]] ; then
-    echo "home/ben/calcs not in pwd, assuming on localhost"
-    exit 1;
-else
-
-    if [[ $# -eq 0 ]] ; then
-        pwd | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/'
-        pwd | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
-    else    
-        echo "`pwd`/$1" | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/'
-        echo "`pwd`/$1" | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
+    echo "local host:"
+    echo "xclip: `xclip -o`"
+    
+    command=`xclip -o | grep ben/calcs`
+    if [[ -z $command  ]] ; then
+        echo "xclip wrong, exit 1!"
+        exit 1
+    else
+      if [[ $# -eq 0 ]] ; then
+        run=avogadro
+      else
+        run=$1
+      fi
+        # bunch of cases
+        # if *out, *xyz, open with avogadro
+        # if *in, open with browser (or vim, -vim option)
+        # Let's just assume *out or *xyz for now
+        cd ~/Downloads/qcp
+        echo "wget $command"
+        wget --output-file=logfile $command
+        file=`grep saved logfile | awk '{print $6}' | sed 's/‘//' | sed 's/’//'`
+        cp $file tmp.out
+        echo "open $file in avogadro"
+        $run tmp.out
     fi
-
+else
+    echo "remote host:"
+    if [[ $# -eq 0 ]] ; then
+        pwd -P | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
+    else    
+        echo "`pwd -P`/$1" | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
+    fi
+    echo "xclip: `xclip -o`"
 fi
 
