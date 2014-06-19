@@ -10,18 +10,35 @@ if [ -z $1 ]; then
     target="*.out"
 else
     if [ $1 == "-v" ]; then
-        target="*.out"
+        target=$2
+        if [ -z $2 ]; then
+            target="*.out"
+        fi
         echo "verbose"
         grep -H "Convergence criterion met" $target
         grep -H "CCSD total energy" $target
         grep -H "MP2         total energy" $target
-        exit
+    elif [ $1 == "-e" ]; then
+        target=$2
+        if [ -z $2 ]; then
+            target="*.out"
+        fi
+        for output in $target; do
+            echo "***   Energy Components   ***"
+            grep -H ENuc $output | tail -1
+            grep -H E1 $output   | tail -1
+            grep -H EJ $output   | tail -1
+            grep -H EX $output   | tail -1
+            grep -H "\*\*\* EC" $target   | tail -1
+        done
+    else
+        target=$1
     fi
-    target=$1
 fi
-    scf=`grep -H "Convergence criterion met" $target | awk '{print $1}' | head -1`
-    ccsdt=`grep -H "CCSD total energy" $target | awk '{print $1}' | head -1`
-    mp2=`grep -H "MP2         total energy" $target | awk '{print $1}' | head -1`
+
+scf=`grep -H "Convergence criterion met" $target | awk '{print $1}' | head -1`
+ccsdt=`grep -H "CCSD total energy" $target | awk '{print $1}' | head -1`
+mp2=`grep -H "MP2         total energy" $target | awk '{print $1}' | head -1`
 
 if [ ! -z $scf ]; then
     echo "SCF Energies:"

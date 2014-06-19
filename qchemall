@@ -1,6 +1,47 @@
 #!/bin/bash
 
-for input in *.in; do
-    output=`echo $input | sed 's/\.in/\.out/' `
-    nohup qchem $input > $output &
-done
+if [[ $# -eq 0 ]] ; then
+    command="nohup qchem $input > $output &"
+    echo "$command"
+fi
+
+case "$1" in 
+    help)
+        echo "nohup: (default) nohup qchem *in > *out &"
+        echo "bg   : qchem *in *out &"
+        echo "show : show current qchem jobs running"
+        exit 0
+        ;;
+    bg)
+        command="qchem \$input > \$output &"
+        echo $command
+        for input in *.in; do
+            output=`echo $input | sed 's/\.in/\.out/' `
+            qchem $input $output &
+        done
+        jobs
+        ;;
+    nohup)
+        command="nohup qchem \$input > \$output &"
+        echo $command
+
+        for input in *.in; do
+            output=`echo $input | sed 's/\.in/\.out/' `
+            nohup qchem $input > $output &
+        done
+        ;;
+    show) 
+        ps -aux | grep qchem | awk '{print $2, $11, $12, $13}'
+        jobs | grep qchem
+        ;;
+    *)
+        command="nohup qchem \$input > \$output &"
+        echo $command
+
+        for input in *.in; do
+            output=`echo $input | sed 's/\.in/\.out/' `
+            nohup qchem $input > $output &
+        done
+        ;;
+esac
+
