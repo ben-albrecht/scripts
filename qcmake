@@ -3,6 +3,11 @@
 # Simplified Build script for Q-Chem with various options 
 # Must have a qchem module loaded
 
+ReleaseConf="./configure release intel noopt2 mkl openmp"
+RelFastConf="./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 release mkl"
+FullConf="./configure release intel mkl openmp"
+DevConf="./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 debug mkl"
+
 if [[ -z $QC ]] ; then           # evaluates as true if $QC is not set
   echo "\$QC is not set!"
   echo " Try: \`load module qchem/[QC_build]\`"
@@ -23,7 +28,7 @@ else
     echo "Argument = $1"
     case "$1" in 
       release) 
-        echo "./configure release intel noopt2 mkl openmp"
+        echo $ReleaseConf
         echo "optimization = 0"
         echo "make generated_headers"
         echo "make -j4"
@@ -45,7 +50,7 @@ else
         ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe 
         ;;
       full)
-        echo "./configure release intel mkl openmp"
+        echo $FullConf
         echo "optimization = full"
         echo "make generated_headers"
         echo "make -j4"
@@ -64,14 +69,36 @@ else
         ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe 
         ;;
       dev)
-        echo "./configure intel nointracule nomgc noopt2 nonewpath2 debug mkl"
+        echo DevConf
         echo "optimization = 0"
         echo "make generated_headers"
         echo "make -j4"
         echo "link qcprog.exe, and cronutils"
 
         cd $QC
-        ./configure intel nointracule nomgc noopt2 nonewpath2 debug mkl
+        ./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 debug mkl
+        cd $QC/build
+        
+        sed -i -e 's/-O2/-O0/g' $QC/build/CMakeCache.txt
+        sed -i -e 's/-O3/-O0/g' $QC/build/CMakeCache.txt
+        
+        make generated_headers
+        make -j4
+        
+        mkdir $QC/exe 2> /dev/null
+        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
+        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
+        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe 
+        ;;
+      relfast)
+        echo $RelFastConf
+        echo "optimization = 0"
+        echo "make generated_headers"
+        echo "make -j4"
+        echo "link qcprog.exe, and cronutils"
+
+        cd $QC
+        ./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 release mkl
         cd $QC/build
         
         sed -i -e 's/-O2/-O0/g' $QC/build/CMakeCache.txt
@@ -87,31 +114,18 @@ else
         ;;
       help)
 
-        echo "full : ./configure release intel mkl openmp"
-        echo "dev  : ./configure debug intel nointracule nomgc noopt2 nonewpath2 mkl"
-        echo "rel  : ./configure release intel noopt2 mkl openmp"
-        echo "*    : ./configure release intel mkl openmp"
+        echo "full    : $FullConf"
+        echo "dev     : $DevConf" 
+        echo "rel     : $ReleaseConf" 
+        echo "relfast : $RelFastConf" 
+        echo "*       : No Configure"
         ;;
       *)   
-        echo "./configure intel release mkl openmp"
-        echo "optimization = 0"
-        echo "make generated_headers"
+        echo "Not configuring"
         echo "make -j2"
         echo "link qcprog.exe, and cronutils"
-
-        cd $QC
-        
-        ./configure intel release mkl openmp
-        
         cd $QC/build
-        
-        sed -i -e 's/-O2/-O0/g' $QC/build/CMakeCache.txt
-        sed -i -e 's/-O3/-O0/g' $QC/build/CMakeCache.txt
-        
-        make generated_headers
         make -j2
-        
-        mkdir $QC/exe 2> /dev/null
         ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
         ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
         ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe 
