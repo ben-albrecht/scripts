@@ -1,0 +1,174 @@
+#!/usr/bin/env  python
+
+import sys
+import os
+
+module_path = os.path.abspath(r'../')
+sys.path.append(module_path)
+
+import numpy as np
+import re
+import argparse
+import math
+
+"""
+Global Functions
+"""
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('ofile', help='Q-Chem output file name')
+    opts = parser.parse_args(args)
+    return opts
+
+
+
+def matlines(NBasis, cols):
+    """ Calculate number of lines in a matrix  depending on NBasis """
+    return int((math.ceil(float(NBasis)/cols))*(NBasis+1))
+
+def get_next_matrix(lines, num):
+    regex_column_ids = re.compile(r'\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)')
+    regex_row_values = re.compile(r'\s*(\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)')
+    matrix = []    
+    found_matrix = False
+    while num < len(lines):
+        print num
+        line = lines[num-1]
+        print line
+        line = line.strip()    
+        column_ids = regex_column_ids.match(line)    
+        if column_ids:
+            found_matrix = True
+            column_ids = [int(c) for c in column_ids.groups()]
+            num += 1
+            while num < len(lines):
+                line = lines[num-1]
+                row_values = regex_row_values.match(line)
+                if row_values:
+                    row_index  = int(row_values.group(1))
+                    row_values = [float(v) for v in row_values.groups()[1:]]                
+                    if len(matrix) >= row_index:
+                        matrix[row_index - 1].extend(row_values)
+                    else:
+                        matrix.append(row_values)
+                else:
+                    column_ids = regex_column_ids.match(line)
+                    if not column_ids:
+                        break
+                    column_ids = [int(c) for c in column_ids.groups()]
+                num += 1
+        elif found_matrix:
+            break
+        else:    
+            num += 1
+    return np.array(matrix)
+
+
+def line_jump(NBasis, lines, num):
+    regex_pattern6 = re.compile(r'\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)')
+    regex_pattern4 = re.compile(r'\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)')
+    init = num
+    line = lines[num]
+    starts = []
+    ends = []
+    # Special Matrices
+    if "MO Eigenvalues" in line:
+        found = False
+        while not found:
+            num += 1
+            if "MO Coefficients" in lines[num]:
+                return (num - init)
+        
+    if "MO Coefficients" in line:
+        starts.append(num+1)
+        found = False
+        while not found:
+            num += 1
+            if "Density Matrix" in lines[num]:
+                found = True
+                ends.append(num)
+                line = lines[num]
+    # Matrices
+    if regex_pattern6.match(line):
+        coefcheck = lines[num-1]
+        if not "Coefficients" in coefcheck:
+            starts.append(num)
+            ends.append(num + matsize6)
+            num += matsize6 - 1
+        else:
+            # We do Coefficients Matrices
+            starts.append(num)
+            marker = num
+            found = False
+            while not found:
+                num += 1
+                if "Density Matrix" in lines[num]:
+                    found = True
+                    ends.append(num)
+                    num = marker+1
+    elif regex_pattern4.match(line):
+        # We do Alpha Fock Matrices
+        starts.append(num)
+        ends.append(num + matsize4)
+        num += matsize4 - 1
+    num += 1
+    if 'Full jPAfrg12' in lines[num]:
+        return matlines(NBasis, 6)
+    else:
+        return 0
+
+if __name__ == '__main__':
+    opts = get_arguments()
+
+    work = os.getcwd()
+    oname = opts.ofile
+    stub, ext  = os.path.splitext(oname)
+    subdir = os.path.join(work, stub + '_plots')
+
+    print "subdir: ", subdir
+    if not os.path.exists(subdir): os.makedirs(subdir)
+
+    fname = '%s/%s' % (work, opts.ofile)
+    print "Q-Chem Output: ", fname
+
+    with open(fname, 'r') as handle:
+    
+        lines = handle.readlines()
+        NBasis = get_basis(lines)
+        print "NBasis = ", NBasis
+        if NBasis < 7:
+            print "Basis is too small for this script to work"
+            exit(1)
+
+        num = 1
+        while num < len(lines):
+            line = lines[num-1]
+            jump = line_jump(NBasis, lines, num)
+            if jump > 0:
+                print num-1
+                #matrix = get_next_matrix(lines, num)
+                num += jump
+                print num-1
+                break
+            num += 1
+        
+        sys.exit()
+        # need to feed get_next_matrix line_numbers and handle?
+        #print matrix
+        #sys.exit()
+        import matplotlib
+        matplotlib.use('Agg')  # Or any other X11 back-end
+        import matplotlib.pyplot as plt
+        
+        #x, y = np.mgrid[0:matrix.shape[0]:complex(matrix.shape[0]),
+        #                0:matrix.shape[1]:complex(matrix.shape[1])]    
+        
+        #plt.contourf(x, y, matrix, 512)
+        #matrix[matrix <= 0] = 1e-10
+        #matrix = np.log(matrix)
+        smap = plt.matshow(matrix)
+        plt.colorbar(smap)
+        plt.suptitle("Full jPAfrg12")
+        #plt.show()
+        plt.savefig("PLOT.pdf")
+        
