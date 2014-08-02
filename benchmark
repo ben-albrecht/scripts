@@ -1,0 +1,177 @@
+#!/bin/bash
+
+ReplaceOrCreate () 
+{
+    Dir=$1
+    # if directory doesn't exist
+    if [ -d "$Dir" ]; then
+        rm -r $Dir
+    fi
+    mkdir $Dir
+}
+
+
+GenInpPBE ()
+{
+    Geometry=$1
+    BASIS=$2
+    PURCAR=$3
+    Dir=`ls $Geometry | sed 's/.[0-9]//g'`
+    Input=$Dir/$Geometry.PBE.$BASIS.in
+    cat $Geometry                       >> $Input 
+    echo ""                             >> $Input 
+    echo "\$rem"                        >> $Input 
+    echo "BASIS           $BASIS"       >> $Input 
+    echo "EXCHANGE        PBE"          >> $Input 
+    echo "CORRELATION     PBE"          >> $Input 
+    echo "SCF_ALGORITHM   DIIS"         >> $Input 
+    echo "incfock         0"            >> $Input 
+    echo "PURCAR          $PURCAR"      >> $Input 
+    echo "MAXSCF          300"          >> $Input 
+    echo "symmetry        false"        >> $Input 
+    echo "sym_ignore      true"         >> $Input 
+    echo "\$end"                        >> $Input 
+}
+
+
+GenInpMP2 ()
+{
+    Geometry=$1
+    BASIS=$2
+    PURCAR=$3
+    Dir=`ls $Geometry | sed 's/.[0-9]//g'`
+    Input=$Dir/$Geometry.MP2.$BASIS.in
+    cat $Geometry                       >> $Input  
+    echo ""                             >> $Input 
+    echo "\$rem"                        >> $Input 
+    echo "BASIS           $BASIS"       >> $Input 
+    echo "EXCHANGE        PBE"          >> $Input 
+    echo "CORRELATION     PBE"          >> $Input 
+    echo "SCF_ALGORITHM   DIIS"         >> $Input 
+    echo "incfock         0"            >> $Input 
+    echo "PURCAR          $PURCAR"      >> $Input 
+    echo "MAXSCF          300"          >> $Input 
+    echo "symmetry        false"        >> $Input 
+    echo "sym_ignore      true"         >> $Input 
+    echo "\$end"                        >> $Input 
+    echo ""                             >> $Input 
+    echo "@@@"                          >> $Input 
+    echo ""                             >> $Input 
+    cat $Geometry                       >> $Input 
+    echo ""                             >> $Input 
+    echo "\$rem"                        >> $Input 
+    echo "mp2_restart_no_scf  true"     >> $Input 
+    echo "iguess          read"         >> $Input 
+    echo "skip_scfman     1"            >> $Input 
+    echo "scf_guess       read"         >> $Input 
+    echo "CORRELATION     MP2"          >> $Input 
+    echo "mem_total       2000"         >> $Input 
+    echo "BASIS           $BASIS"       >> $Input 
+    echo "SCF_ALGORITHM   DIIS"         >> $Input 
+    echo "incfock         0"            >> $Input 
+    echo "PURCAR          $PURCAR"      >> $Input 
+    echo "MAXSCF          300"          >> $Input 
+    echo "symmetry        false"        >> $Input 
+    echo "sym_ignore      true"         >> $Input 
+    echo "\$end"                        >> $Input 
+}
+
+
+GenInpPBEinPBE ()
+{
+    Geometry=$1
+    BASIS=$2
+    PURCAR=$3
+    Dir=`ls $Geometry | sed 's/.[0-9]//g'`
+    Input=$Dir/$Geometry.PBEinPBE.$BASIS.in
+    cat $Geometry                    >> $Input 
+    echo ""                          >> $Input 
+    echo "\$rem"                     >> $Input 
+    echo "BASIS           $BASIS"    >> $Input 
+    echo "EXCHANGE        PBE"       >> $Input 
+    echo "CORRELATION     PBE"       >> $Input 
+    echo "EMBEDMAN        1"         >> $Input 
+    echo "EMBED_THEORY    0"         >> $Input 
+    echo "SCF_ALGORITHM   DIIS"      >> $Input 
+    echo "incfock         0"         >> $Input 
+    echo "PURCAR          $PURCAR"   >> $Input 
+    echo "MAXSCF          300"       >> $Input 
+    echo "symmetry        false"     >> $Input 
+    echo "sym_ignore      true"      >> $Input 
+    echo "\$end"                     >> $Input 
+}
+
+
+GenInpMP2inPBE ()
+{
+    Geometry=$1
+    BASIS=$2
+    PURCAR=$3
+    Dir=`ls $Geometry | sed 's/.[0-9]//g'`
+    Input=$Dir/$Geometry.PBEinMP2.$BASIS.in
+    cat $Geometry                    >>  $Input
+    echo ""                          >>  $Input
+    echo "\$rem"                     >>  $Input
+    echo "BASIS           $BASIS"    >>  $Input
+    echo "EXCHANGE        PBE"       >>  $Input
+    echo "CORRELATION     PBE"       >>  $Input
+    echo "EMBEDMAN        1"         >>  $Input
+    echo "EMBED_THEORY    2"         >>  $Input
+    echo "SCF_ALGORITHM   DIIS"      >>  $Input
+    echo "incfock         0"         >>  $Input
+    echo "PURCAR          $PURCAR"   >>  $Input
+    echo "MAXSCF          300"       >>  $Input
+    echo "symmetry        false"     >>  $Input
+    echo "sym_ignore      true"      >>  $Input 
+    echo "\$end"                     >>  $Input 
+}
+
+# --------------------
+# Start of Main Script
+# --------------------
+
+Main=$1
+cd $Main
+
+for Geometry in `ls *.1`; do
+    Dir=`ls $Geometry | sed 's/.1//g'`
+    ReplaceOrCreate $Dir
+    if [ $Dir -eq 1 ]; then
+        # Set up PBE Calc @ 6-31G* / cc-pVDZ
+        GenInpPBE $Geometry "6-31G*" "222"
+        GenInpPBE $Geometry "cc-pVDZ" "111"
+        GenInpMP2 $Geometry "6-31G*" "222"
+        GenInpMP2 $Geometry "cc-pVDZ" "111"
+        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
+    else
+        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpPBEinPBE $Geometry "6-31G*" "222"
+        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
+        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpMP2inPBE $Geometry "6-31G*" "222"
+        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
+    fi
+
+done
+
+for Geometry in `ls *.2`; do
+    Dir=`ls $Geometry | sed 's/.2//g'`
+    if [ $Dir -eq 1 ]; then
+        # Set up PBE Calc @ 6-31G* / cc-pVDZ
+        GenInpPBE $Geometry "6-31G*" "222" 
+        GenInpPBE $Geometry "cc-pVDZ" "111"
+        GenInpMP2 $Geometry "6-31G*" "222"
+        GenInpMP2 $Geometry "cc-pVDZ" "111"
+        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
+    else
+        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpPBEinPBE $Geometry "6-31G*" "222"
+        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
+        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpMP2inPBE $Geometry "6-31G*" "222"
+        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
+    fi
+    #echo $Geometry
+done
+
+
