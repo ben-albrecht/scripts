@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Run jobs 1 at a time for timings purposes
+
+IsEmpty() {
+    if [ ! -n $1 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+JobFailed() {
+    Output=$1
+    MISSION=`grep -n MISSION $Output`
+    if [ $MISSION -gt 0 ]; then
+        return 0
+    else
+        echo "No MISSION COMPLETE found in $1"
+        return 1
+    fi
+
+
+}
+
+Main=$1
+
+if IsEmpty $Main; then
+    echo "benchrun requires an argument that is a directory full of */*.in inputs"
+    echo "Try: benchrun mg4"
+    exit 1
+fi
+cd $Main
+# Show which version of Q-Chem running with
+module list
+for Input in `ls */*.in`; do
+    Output=`ls $Input | sed 's/\.in/\.out/g'`
+    if [ -f $Output ]; then
+        if JobFailed $Output; then
+            echo "Overwriting $Output"
+            echo "qchem $Input > $Output"
+            qchem $Input > $Output
+        else
+            echo "$Output already completed successively!, skipping.."
+        fi
+    else
+        echo "qchem $Input > $Output"
+        qchem $Input > $Output
+    fi
+done
+
