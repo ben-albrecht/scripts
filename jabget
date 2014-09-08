@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "argument must be a URL to reference"
+echo "Super-basic script at this point:"
+echo "  Converts .ris reference URLs to ref.bib"
+wget -O reference.ris $1
+cat reference.ris | ris2xml | xml2bib >> ref.bib
