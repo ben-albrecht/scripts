@@ -6,8 +6,57 @@
 # if argument is directory, changes to that directory
 # if argument is a string in file, opens that file 
 
+IsEmpty() {
+    if [ -z $1 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 
 QUERY=$1
+REF="$HOME/repos/ref"
+
+# Go to ref
+if IsEmpty $QUERY; then
+    cd $REF
+    ls
+    return
+fi
+
+# Go to directory in ref named $QUERY
+DIR=`find $REF/$QUERY -maxdepth 0 2> /dev/null`
+if ! IsEmpty $DIR; then
+    cd $DIR
+    ls
+    return
+fi
+
+# Open file in ref named $QUERY
+FILE=`find $REF -name "$QUERY" 2> /dev/null`
+if ! IsEmpty $FILE; then
+    vi $FILE
+    return
+fi
+
+# Open file in ref containing string $QUERY
+GREP=`grep -Hs $QUERY $REF/*`
+if ! IsEmpty $GREP; then
+    clear
+    red='\e[0;31m'
+    purple='\e[1;35m'
+    NC='\e[0m' # No Color
+    echo "Lines Found In Files:"
+    echo -e "${purple}---------------------------${NC}"
+    echo -e "${red}`grep -hsl $QUERY $REF/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
+    echo -e "${purple}---------------------------${NC}"
+    echo ""
+    echo -e "${purple}-----------------------------------------------------------------------------------------------------------${NC}"
+    grep -hs --color=auto $QUERY $REF/*
+    echo -e "${purple}-----------------------------------------------------------------------------------------------------------${NC}"
+    return
+fi
 
 
 
