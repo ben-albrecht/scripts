@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Quick Reference bash script
+# Searches $HOME/repos/ref recursively for argument
+# if argument is file, opens file in vim
+# if argument is directory, changes to that directory
+# if argument is a string in file, opens that file 
+
+
+QUERY=$1
+
+
+
