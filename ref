@@ -55,6 +55,7 @@ fi
 Grep=`grep -Hs $Query $Ref/*`
 if ! IsEmpty $Grep; then
     clear
+    # Have to use \x1B instead of \e for mac oSX
     red='\e[0;31m'
     purple='\e[1;35m'
     NC='\e[0m' # No Color
