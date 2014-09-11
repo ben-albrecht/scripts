@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 ReplaceOrCreate () 
 {
     Dir=$1
@@ -177,5 +178,4 @@ for Geometry in `ls *.2`; do
         GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
     fi
 done
-
 
