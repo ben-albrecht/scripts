@@ -1,5 +1,55 @@
 #!/bin/bash
 
+# --------------------
+# Start of Main Script
+# --------------------
+
+Main=$1
+cd $Main
+
+for Geometry in `ls *.1`; do
+    Dir=`ls $Geometry | sed 's/.1//g'`
+    ReplaceOrCreate $Dir
+    if [ $Dir -eq 1 ]; then
+        # Set up PBE Calc @ 6-31G* / cc-pVDZ
+        GenInpPBE $Geometry "6-31G*" "222"
+        GenInpPBE $Geometry "cc-pVDZ" "111"
+        GenInpMP2 $Geometry "6-31G*" "222"
+        GenInpMP2 $Geometry "cc-pVDZ" "111"
+        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
+    else
+        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpPBEinPBE $Geometry "6-31G*" "222"
+        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
+        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpMP2inPBE $Geometry "6-31G*" "222"
+        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
+    fi
+
+done
+
+for Geometry in `ls *.2`; do
+    Dir=`ls $Geometry | sed 's/.2//g'`
+    if [ $Dir -eq 1 ]; then
+        # Set up PBE Calc @ 6-31G* / cc-pVDZ
+        GenInpPBE $Geometry "6-31G*" "222" 
+        GenInpPBE $Geometry "cc-pVDZ" "111"
+        GenInpMP2 $Geometry "6-31G*" "222"
+        GenInpMP2 $Geometry "cc-pVDZ" "111"
+        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
+    else
+        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpPBEinPBE $Geometry "6-31G*" "222"
+        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
+        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpMP2inPBE $Geometry "6-31G*" "222"
+        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
+    fi
+    #echo $Geometry
+done
+
+
+
 ReplaceOrCreate () 
 {
     Dir=$1
@@ -125,53 +175,3 @@ GenInpMP2inPBE ()
     echo "sym_ignore      true"      >>  $Input 
     echo "\$end"                     >>  $Input 
 }
-
-# --------------------
-# Start of Main Script
-# --------------------
-
-Main=$1
-cd $Main
-
-for Geometry in `ls *.1`; do
-    Dir=`ls $Geometry | sed 's/.1//g'`
-    ReplaceOrCreate $Dir
-    if [ $Dir -eq 1 ]; then
-        # Set up PBE Calc @ 6-31G* / cc-pVDZ
-        GenInpPBE $Geometry "6-31G*" "222"
-        GenInpPBE $Geometry "cc-pVDZ" "111"
-        GenInpMP2 $Geometry "6-31G*" "222"
-        GenInpMP2 $Geometry "cc-pVDZ" "111"
-        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
-    else
-        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpPBEinPBE $Geometry "6-31G*" "222"
-        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
-        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpMP2inPBE $Geometry "6-31G*" "222"
-        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
-    fi
-
-done
-
-for Geometry in `ls *.2`; do
-    Dir=`ls $Geometry | sed 's/.2//g'`
-    if [ $Dir -eq 1 ]; then
-        # Set up PBE Calc @ 6-31G* / cc-pVDZ
-        GenInpPBE $Geometry "6-31G*" "222" 
-        GenInpPBE $Geometry "cc-pVDZ" "111"
-        GenInpMP2 $Geometry "6-31G*" "222"
-        GenInpMP2 $Geometry "cc-pVDZ" "111"
-        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
-    else
-        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpPBEinPBE $Geometry "6-31G*" "222"
-        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
-        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpMP2inPBE $Geometry "6-31G*" "222"
-        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
-    fi
-    #echo $Geometry
-done
-
-
