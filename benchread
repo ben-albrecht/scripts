@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Run jobs 1 at a time for timings purposes
+
+IsEmpty() {
+    if [ ! -n $1 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
+Main=$1
+
+if IsEmpty $Main; then
+    echo "benchread requires an argument that is a directory full of */*.in inputs"
+    echo "Try: benchread mg4"
+    exit 1
+fi
+cd $Main
+
+# Show which version of Q-Chem running with
+for Output in `ls */*.out`; do
+    # if embedding job
+    PBE1=`grep KS-DFT $Output | grep "Fragment 1" | awk '{print $8}'`
+    PBE2=`grep KS-DFT $Output | grep "Fragment 2" | awk '{print $8}'`
+    MP21=`grep "total energy" $Output | awk '{print $5}'`
+    echo "$Output   $MP21   $PBE1   $PBE2" 
+    # else if full job
+    #PBE=
+    #MP2=
+done

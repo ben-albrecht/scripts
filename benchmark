@@ -1,54 +1,5 @@
 #!/bin/bash
 
-# --------------------
-# Start of Main Script
-# --------------------
-
-Main=$1
-cd $Main
-
-for Geometry in `ls *.1`; do
-    Dir=`ls $Geometry | sed 's/.1//g'`
-    ReplaceOrCreate $Dir
-    if [ $Dir -eq 1 ]; then
-        # Set up PBE Calc @ 6-31G* / cc-pVDZ
-        GenInpPBE $Geometry "6-31G*" "222"
-        GenInpPBE $Geometry "cc-pVDZ" "111"
-        GenInpMP2 $Geometry "6-31G*" "222"
-        GenInpMP2 $Geometry "cc-pVDZ" "111"
-        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
-    else
-        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpPBEinPBE $Geometry "6-31G*" "222"
-        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
-        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpMP2inPBE $Geometry "6-31G*" "222"
-        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
-    fi
-
-done
-
-for Geometry in `ls *.2`; do
-    Dir=`ls $Geometry | sed 's/.2//g'`
-    if [ $Dir -eq 1 ]; then
-        # Set up PBE Calc @ 6-31G* / cc-pVDZ
-        GenInpPBE $Geometry "6-31G*" "222" 
-        GenInpPBE $Geometry "cc-pVDZ" "111"
-        GenInpMP2 $Geometry "6-31G*" "222"
-        GenInpMP2 $Geometry "cc-pVDZ" "111"
-        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
-    else
-        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpPBEinPBE $Geometry "6-31G*" "222"
-        GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
-        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
-        GenInpMP2inPBE $Geometry "6-31G*" "222"
-        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
-    fi
-    #echo $Geometry
-done
-
-
 
 ReplaceOrCreate () 
 {
@@ -77,7 +28,7 @@ GenInpPBE ()
     echo "SCF_ALGORITHM   DIIS"         >> $Input 
     echo "incfock         0"            >> $Input 
     echo "PURCAR          $PURCAR"      >> $Input 
-    echo "MAXSCF          300"          >> $Input 
+    echo "MAXSCF          100"          >> $Input 
     echo "symmetry        false"        >> $Input 
     echo "sym_ignore      true"         >> $Input 
     echo "\$end"                        >> $Input 
@@ -100,7 +51,7 @@ GenInpMP2 ()
     echo "SCF_ALGORITHM   DIIS"         >> $Input 
     echo "incfock         0"            >> $Input 
     echo "PURCAR          $PURCAR"      >> $Input 
-    echo "MAXSCF          300"          >> $Input 
+    echo "MAXSCF          100"          >> $Input 
     echo "symmetry        false"        >> $Input 
     echo "sym_ignore      true"         >> $Input 
     echo "\$end"                        >> $Input 
@@ -120,7 +71,7 @@ GenInpMP2 ()
     echo "SCF_ALGORITHM   DIIS"         >> $Input 
     echo "incfock         0"            >> $Input 
     echo "PURCAR          $PURCAR"      >> $Input 
-    echo "MAXSCF          300"          >> $Input 
+    echo "MAXSCF          100"          >> $Input 
     echo "symmetry        false"        >> $Input 
     echo "sym_ignore      true"         >> $Input 
     echo "\$end"                        >> $Input 
@@ -145,7 +96,7 @@ GenInpPBEinPBE ()
     echo "SCF_ALGORITHM   DIIS"      >> $Input 
     echo "incfock         0"         >> $Input 
     echo "PURCAR          $PURCAR"   >> $Input 
-    echo "MAXSCF          300"       >> $Input 
+    echo "MAXSCF          100"       >> $Input 
     echo "symmetry        false"     >> $Input 
     echo "sym_ignore      true"      >> $Input 
     echo "\$end"                     >> $Input 
@@ -158,7 +109,7 @@ GenInpMP2inPBE ()
     BASIS=$2
     PURCAR=$3
     Dir=`ls $Geometry | sed 's/.[0-9]//g'`
-    Input=$Dir/$Geometry.PBEinMP2.$BASIS.in
+    Input=$Dir/$Geometry.MP2inPBE.$BASIS.in
     cat $Geometry                    >>  $Input
     echo ""                          >>  $Input
     echo "\$rem"                     >>  $Input
@@ -170,8 +121,61 @@ GenInpMP2inPBE ()
     echo "SCF_ALGORITHM   DIIS"      >>  $Input
     echo "incfock         0"         >>  $Input
     echo "PURCAR          $PURCAR"   >>  $Input
-    echo "MAXSCF          300"       >>  $Input
+    echo "MAXSCF          100"       >>  $Input
     echo "symmetry        false"     >>  $Input
     echo "sym_ignore      true"      >>  $Input 
     echo "\$end"                     >>  $Input 
 }
+
+# --------------------
+# Start of Main Script
+# --------------------
+
+Main=$1
+cd $Main
+
+# Bound Geometry
+for Geometry in `ls *.1`; do
+    Dir=`ls $Geometry | sed 's/.1//g'`
+    ReplaceOrCreate $Dir
+    if [ $Dir -eq 1 ]; then
+        # Set up PBE Calc @ 6-31G* / cc-pVDZ
+        GenInpPBE $Geometry "6-31G" "222"
+        GenInpPBE $Geometry "cc-pVDZ" "111"
+        GenInpMP2 $Geometry "6-31G" "222"
+        GenInpMP2 $Geometry "cc-pVDZ" "111"
+        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
+    else
+        # !! This is included in MP2-in-PBE !! #
+        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
+        #GenInpPBEinPBE $Geometry "6-31G" "222"
+        #GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
+        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpMP2inPBE $Geometry "6-31G" "222"
+        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
+    fi
+
+done
+
+# Unbound Geometry
+for Geometry in `ls *.2`; do
+    Dir=`ls $Geometry | sed 's/.2//g'`
+    if [ $Dir -eq 1 ]; then
+        # Set up PBE Calc @ 6-31G* / cc-pVDZ
+        GenInpPBE $Geometry "6-31G" "222" 
+        GenInpPBE $Geometry "cc-pVDZ" "111"
+        GenInpMP2 $Geometry "6-31G" "222"
+        GenInpMP2 $Geometry "cc-pVDZ" "111"
+        # Set up MP2 Calc @ 6-31G* / cc-pVDZ
+    else
+        # !! This is included in MP2-in-PBE !! #
+        # Set up PBE-in-PBE @ 6-31G* / cc-pVDZ
+        #GenInpPBEinPBE $Geometry "6-31G" "222"
+        #GenInpPBEinPBE $Geometry "cc-pVDZ" "111"
+
+        # Set up MP2-in-PBE @ 6-31G* / cc-pVDZ
+        GenInpMP2inPBE $Geometry "6-31G" "222"
+        GenInpMP2inPBE $Geometry "cc-pVDZ" "111"
+    fi
+done
+

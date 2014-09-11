@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Generate ctags for every separate directory
+for dir in $QC/* ; do
+  if [ -d "$dir" ]; then
+    echo $dir
+    cd $dir
+    ctags -R
+    cd $QC
+  fi
+done
