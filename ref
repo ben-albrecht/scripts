@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Quick Reference bash script
 # Searches $HOME/repos/ref recursively for argument
@@ -6,67 +6,50 @@
 #   if argument is directory, changes to that directory
 #   if argument is a string in file, opens that file 
 
-
-IsEmpty() {
-    if [ -z $1 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-
-IsDirectory() {
-    if [ -d $1 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
+# libs
+source ~/repos/scripts/lib/bash/colors.sh
+source ~/repos/scripts/lib/bash/conditions.sh
 
 Query=$1
 Ref="$HOME/repos/ref"
 
 # Go to ref
-if IsEmpty $Query; then
+if IsEmptyString $Query; then
     cd $Ref
     ls
     return
 fi
 
 # Go to directory in ref named $Query
-Dir=`find $Ref/$Query -maxdepth 0 2> /dev/null`
-if ! IsEmpty $Dir && IsDirectory $Dir; then
-    echo "$Dir is a directory"
-    cd $Dir
-    ls
-    return
+Dir=`find $Ref -name "$Query"  2> /dev/null`
+if ! IsEmptyString $Dir; then
+    if IsDirectory $Dir; then
+        echo "$Dir is a directory"
+        cd $Dir
+        ls
+        return
+    fi
 fi
 
 # Open file in ref named $Query
 File=`find $Ref -name "$Query" 2> /dev/null`
-if ! IsEmpty $File; then
+if ! IsEmptyString $File; then
     vi $File
     return
 fi
 
 # Open file in ref containing string $Query
 Grep=`grep -Hs $Query $Ref/*`
-if ! IsEmpty $Grep; then
+if ! IsEmptyString $Grep; then
     clear
-    # Have to use \x1B instead of \e for mac oSX
-    red='\e[0;31m'
-    purple='\e[1;35m'
-    NC='\e[0m' # No Color
     echo "Lines Found In Files:"
-    echo -e "${purple}---------------------------${NC}"
-    echo -e "${red}`grep -hsl $Query $Ref/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
-    echo -e "${purple}---------------------------${NC}"
+    echo -e "${Purple}---------------------------${NC}"
+    echo -e "${Red}`grep -hsl $Query $Ref/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
+    echo -e "${Purple}---------------------------${NC}"
     echo ""
-    echo -e "${purple}-----------------------------------------------------------------------------------------------------------${NC}"
+    echo -e "${Purple}-----------------------------------------------------------------------------------------------------------${NC}"
     grep -hs --color=auto $Query $Ref/*
-    echo -e "${purple}-----------------------------------------------------------------------------------------------------------${NC}"
+    echo -e "${Purple}-----------------------------------------------------------------------------------------------------------${NC}"
     return
 fi
 
