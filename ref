@@ -44,6 +44,7 @@ if ! IsEmpty $Dir && IsDirectory $Dir; then
     return
 fi
 
+#TODO: try removing extension from filename as well
 # Open file in ref named $Query
 File=`find $Ref -name "$Query" 2> /dev/null`
 if ! IsEmpty $File; then
@@ -52,7 +53,7 @@ if ! IsEmpty $File; then
 fi
 
 # Open file in ref containing string $Query
-Grep=`grep -Hs $Query $Ref/*`
+Grep=`grep -Hsr $Query $Ref/*`
 if ! IsEmpty $Grep; then
     clear
     red='\e[0;31m'
@@ -60,14 +61,13 @@ if ! IsEmpty $Grep; then
     NC='\e[0m' # No Color
     echo "Lines Found In Files:"
     echo -e "${purple}---------------------------${NC}"
-    echo -e "${red}`grep -hsl $Query $Ref/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
+    echo -e "${red}`grep -hslr $Query $Ref/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
     echo -e "${purple}---------------------------${NC}"
     echo ""
     echo -e "${purple}-----------------------------------------------------------------------------------------------------------${NC}"
-    grep -hs --color=auto $Query $Ref/*
+    grep -hsr --color=auto $Query $Ref/*
     echo -e "${purple}-----------------------------------------------------------------------------------------------------------${NC}"
     return
 fi
-
 
 
