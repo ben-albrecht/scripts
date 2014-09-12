@@ -40,7 +40,6 @@ if ! IsEmptyString $File; then
 fi
 
 # Open file in ref containing string $Query
-<<<<<<< HEAD
 Grep=`grep -Hsr $Query $Ref/*`
 if ! IsEmpty $Grep; then
     clear
