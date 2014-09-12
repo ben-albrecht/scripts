@@ -2,19 +2,18 @@
 
 # \e vs. \x1B is OS-dependent UHGGHGHGH
 # Little bash script to git up all repositories in $HOME/repos
-red='\e[0;31m'
-purple='\e[1;35m'
-NC='\e[0m' # No Color
+
+source ~/repos/scripts/lib/bash/colors.sh
 
 cd $HOME/repos
 
 for repo in `find . -mindepth 1 -maxdepth 1 -type d`
 do
-    echo -e "${purple} ${repo} ${NC}"
+    echo -e "${Purple} ${repo} ${NC}"
     (cd "${repo}" && git checkout -q master && git up -q)
 done
 
 # .dotfiles
 repo=$HOME/.dotfiles
-echo -e "${purple} ~/.dotfiles ${NC}"
+echo -e "${Purple} ~/.dotfiles ${NC}"
 (cd "${repo}" && git checkout -q master && git up -q)
