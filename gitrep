@@ -10,10 +10,10 @@ cd $HOME/repos
 for repo in `find . -mindepth 1 -maxdepth 1 -type d`
 do
     echo -e "${Purple} ${repo} ${NC}"
-    (cd "${repo}" && git checkout -q master && git up -q)
+    (cd "${repo}" && git checkout -q master && git up -q && git status -s)
 done
 
 # .dotfiles
 repo=$HOME/.dotfiles
 echo -e "${Purple} ~/.dotfiles ${NC}"
-(cd "${repo}" && git checkout -q master && git up -q)
+(cd "${repo}" && git checkout -q master && git up -q && git status -s)
