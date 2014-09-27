@@ -4,14 +4,14 @@
 # Additional options to grep can be given before the pattern, e.g.
 #  $ search -i "print"
 #
-# $Version$   $Date$
-# $Author$
+# 1.1   9-27-14
+# Updated by Ben Albrecht
 
 # program we're using for grepping
 GREP='fgrep -H'
 
 # search for the following suffices
-declare suffix="h hh F f C c cpp S s"
+declare suffix="h hh F f C c cpp S s py"
 
 echo -ne "\033]30;searching ...\007"
 echo -e "\033[1;31m>>> $GREP \"$@\" in *.[$suffix]:\033[0m"
