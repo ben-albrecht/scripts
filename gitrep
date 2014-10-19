@@ -4,13 +4,17 @@
 # Little bash script to git up all repositories in $HOME/repos
 
 source ~/repos/scripts/lib/bash/colors.sh
+source ~/repos/scripts/lib/bash/conditions.sh
 
 cd $HOME/repos
 
 for repo in `find . -mindepth 1 -maxdepth 1 -type d`
 do
-    echo -e "${Purple} ${repo} ${NC}"
-    (cd "${repo}" && git checkout -q master && git up -q && git status -s)
+    # Check that directory is a git repository
+    if IsDirectory $repo/.git ; then
+        echo -e "${Purple} ${repo} ${NC}"
+        (cd "${repo}" && git checkout -q master && git up -q && git status -s)
+    fi
 done
 
 # .dotfiles
