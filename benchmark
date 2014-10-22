@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Temp script I made real quick for running some benchmarks
 
 ReplaceOrCreate () 
 {

@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# \e vs. \x1B is OS-dependent UHGGHGHGH
-# Little bash script to git up all repositories in $HOME/repos
+# Awesome bash script I wrote to update all my git repos with git up (a git alias)
+# and then report back any issues with colorized text
+
+# Note: \e vs. \x1B is OS-dependent UHGGHGHGH - handled via colors.sh
 
 source ~/repos/scripts/lib/bash/colors.sh
 source ~/repos/scripts/lib/bash/conditions.sh

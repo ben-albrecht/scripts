@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Quick temp script I wrote to run several jobs
 # Run jobs 1 at a time for timings purposes
 
 IsEmpty() {

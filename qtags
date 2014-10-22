@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Generate ctags for every separate directory
+# What I was trying to do here actually did not work out
+# This script is useless
 for dir in $QC/* ; do
   if [ -d "$dir" ]; then
     echo $dir

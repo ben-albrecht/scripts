@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Convert .ris to .bib on the fly
+# Will expand this if ever necessary
+
 echo "argument must be a URL to reference"
 echo "Super-basic script at this point:"
 echo "  Converts .ris reference URLs to ref.bib"

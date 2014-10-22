@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# Script to modify and write the pwd to xclip such that it 
-#   can be used to wget locally quickly
-# http://lambrecht.chem.pitt.edu/~ben/
-
-
+# The idea of this script is to minimize the effort of going from
+#   a Q-Chem output (typically geometry-opt) to a 
+#   locally run Avogadro instance on the output
 
 
 command=`pwd -P | grep home/ben/calcs`
@@ -12,7 +10,7 @@ command=`pwd -P | grep home/ben/calcs`
 if [[ -z $command  ]] ; then
     echo "local host:"
     echo "xclip: `xclip -o`"
-    
+
     command=`xclip -o | grep ben/calcs`
     if [[ -z $command  ]] ; then
         echo "xclip wrong, exit 1!"
@@ -39,7 +37,7 @@ else
     echo "remote host:"
     if [[ $# -eq 0 ]] ; then
         pwd -P | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
-    else    
+    else
         echo "`pwd -P`/$1" | sed 's/\/home\//http:\/\/lambrecht.chem.pitt.edu\/\~/' | xclip -i
     fi
     echo "xclip: `xclip -o`"

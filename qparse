@@ -1,5 +1,19 @@
 #!/usr/bin/env  python
 
+# Component of my future qcl suite of scripts
+# WORK IN PROGRESS
+# The idea behind this script is to parse cryptic Q-Chem outputs into
+# meaningful human-readable information, based on the request
+
+# An example:
+#   I want to see the density matrix w.r.t. SCF iterations.
+#   I run something like `qparse density scf`
+#   and the script generates a pdf of plots containing heat maps 
+#   of the density matrix per SCF iteration.
+
+#   It'd be nice if it could write and publish papers for me too.
+
+
 import sys
 import os
 
@@ -29,14 +43,14 @@ def matlines(NBasis, cols):
 def get_next_matrix(lines, num):
     regex_column_ids = re.compile(r'\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)')
     regex_row_values = re.compile(r'\s*(\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)\s*([\+-]?\d+\.?\d+)')
-    matrix = []    
+    matrix = []
     found_matrix = False
     while num < len(lines):
         print num
         line = lines[num-1]
         print line
-        line = line.strip()    
-        column_ids = regex_column_ids.match(line)    
+        line = line.strip()
+        column_ids = regex_column_ids.match(line)
         if column_ids:
             found_matrix = True
             column_ids = [int(c) for c in column_ids.groups()]
@@ -46,7 +60,7 @@ def get_next_matrix(lines, num):
                 row_values = regex_row_values.match(line)
                 if row_values:
                     row_index  = int(row_values.group(1))
-                    row_values = [float(v) for v in row_values.groups()[1:]]                
+                    row_values = [float(v) for v in row_values.groups()[1:]]
                     if len(matrix) >= row_index:
                         matrix[row_index - 1].extend(row_values)
                     else:
@@ -59,7 +73,7 @@ def get_next_matrix(lines, num):
                 num += 1
         elif found_matrix:
             break
-        else:    
+        else:
             num += 1
     return np.array(matrix)
 
@@ -78,7 +92,7 @@ def line_jump(NBasis, lines, num):
             num += 1
             if "MO Coefficients" in lines[num]:
                 return (num - init)
-        
+
     if "MO Coefficients" in line:
         starts.append(num+1)
         found = False
@@ -132,7 +146,7 @@ if __name__ == '__main__':
     print "Q-Chem Output: ", fname
 
     with open(fname, 'r') as handle:
-    
+
         lines = handle.readlines()
         NBasis = get_basis(lines)
         print "NBasis = ", NBasis
@@ -151,7 +165,7 @@ if __name__ == '__main__':
                 print num-1
                 break
             num += 1
-        
+
         sys.exit()
         # need to feed get_next_matrix line_numbers and handle?
         #print matrix
@@ -159,10 +173,10 @@ if __name__ == '__main__':
         import matplotlib
         matplotlib.use('Agg')  # Or any other X11 back-end
         import matplotlib.pyplot as plt
-        
+
         #x, y = np.mgrid[0:matrix.shape[0]:complex(matrix.shape[0]),
-        #                0:matrix.shape[1]:complex(matrix.shape[1])]    
-        
+        #                0:matrix.shape[1]:complex(matrix.shape[1])]
+
         #plt.contourf(x, y, matrix, 512)
         #matrix[matrix <= 0] = 1e-10
         #matrix = np.log(matrix)
@@ -171,4 +185,4 @@ if __name__ == '__main__':
         plt.suptitle("Full jPAfrg12")
         #plt.show()
         plt.savefig("PLOT.pdf")
-        
+

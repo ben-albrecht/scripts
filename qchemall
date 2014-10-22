@@ -1,11 +1,20 @@
 #!/bin/bash
 
+# Simple little script to run all the qchem inputs in a directory
+# It took me so many times of trying `qchem *`, that I eventually wrote this script
+#
+# Options:
+#   help  - get commands
+#   nohup - default, run jobs via nohup
+#   bg    - run in background
+#   show  - show all running q-chem jobs either in background or nohup
+
 if [[ $# -eq 0 ]] ; then
     command="nohup qchem $input > $output &"
     echo "$command"
 fi
 
-case "$1" in 
+case "$1" in
     help)
         echo "nohup: (default) nohup qchem *in > *out &"
         echo "bg   : qchem *in *out &"
@@ -30,7 +39,7 @@ case "$1" in
             nohup qchem $input > $output &
         done
         ;;
-    show) 
+    show)
         ps -aux | grep qchem | awk '{print $2, $11, $12, $13}'
         jobs | grep qchem
         ;;
