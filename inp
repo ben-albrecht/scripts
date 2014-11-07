@@ -3,6 +3,8 @@
 """
 inp - an extended qchem input system
 
+Cartesian Product File Generator
+
 Will some day be a part of the qcl suite
 """
 
@@ -16,12 +18,24 @@ import numpy as np
 import re
 import argparse
 import math
+import itertools
 
 def get_arguments(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('inputfile', help='Q-Chem input file name')
     opts = parser.parse_args(args)
     return opts
+
+def get_commands(line, commands_list):
+    regex_command = re.compile(r'\$\((.*)\)')
+    match = re.search(regex_command, line)
+    if match:
+        command = match.group(0)
+        command = command.replace('$(', '')
+        command = command.replace(')', '')
+        commands = command.rsplit(',')
+        commands_list.append(commands)
+    return commands_list
 
 
 if __name__ == '__main__':
@@ -30,26 +44,47 @@ if __name__ == '__main__':
     opts = get_arguments()
     work = os.getcwd()
     inp = opts.inputfile
-    #stub, ext  = os.path.splitext(oname)
-    #subdir = os.path.join(work, stub + '_plots')
+    stub, ext  = os.path.splitext(inp)
+    subdir = os.path.join(work, stub + '_inp')
+    if not os.path.exists(subdir): os.makedirs(subdir)
 
     with open(inp, 'r') as handle:
         # Read in file
         lines = handle.readlines()
         # Search for inp commands
-        regex_command = re.compile(r'\$\((.*)\)')
+        commands_list = []
         for line in lines:
+            commands_list = get_commands(line, commands_list)
+
+    print "Recognized Commands:"
+    for i in commands_list:
+        print i
+    NewList = []
+    for element in itertools.product(*commands_list):
+        NewList.append(element)
+
+
+    for element in NewList:
+        # Generate File Name
+        # stub.[elements].ext
+        name = stub
+        for i in element:
+            name += "." + str(i)
+        name += ext
+        name = name.replace(' ', '')
+        print "Created File" , name
+        file = open(os.path.join(subdir, name), 'w')
+
+        # Generate output, replace lines with their options
+        idx = 0
+        for line in lines:
+            regex_command = re.compile(r'\$\((.*)\)')
             match = re.search(regex_command, line)
             if match:
-                command = match.group(0)
-                command = command.replace('$(', '')
-                command = command.replace(')', '')
-                commands = command.rsplit(',')
-
-#   Create lists with permutations
-
-# Generate array of arrays of commands
-#
-
-#   Generate new inputs using each permutation in the correct place
+                newline = line.replace(match.group(0), element[idx])
+                idx += 1
+                file.write(newline)
+            else:
+                file.write(line)
+        file.close()
 
