@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+"""
+inp - an extended qchem input system
+
+Will some day be a part of the qcl suite
+"""
+
+import sys
+import os
+
+module_path = os.path.abspath(r'../')
+sys.path.append(module_path)
+
+import numpy as np
+import re
+import argparse
+import math
+
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('inputfile', help='Q-Chem input file name')
+    opts = parser.parse_args(args)
+    return opts
+
+
+if __name__ == '__main__':
+
+    # Get Arguments
+    opts = get_arguments()
+    work = os.getcwd()
+    inp = opts.inputfile
+    #stub, ext  = os.path.splitext(oname)
+    #subdir = os.path.join(work, stub + '_plots')
+
+    with open(inp, 'r') as handle:
+        # Read in file
+        lines = handle.readlines()
+        # Search for inp commands
+        regex_command = re.compile(r'\$\((.*)\)')
+        for line in lines:
+            match = re.search(regex_command, line)
+            if match:
+                command = match.group(0)
+                command = command.replace('$(', '')
+                command = command.replace(')', '')
+                commands = command.rsplit(',')
+
+#   Create lists with permutations
+
+# Generate array of arrays of commands
+#
+
+#   Generate new inputs using each permutation in the correct place
+
