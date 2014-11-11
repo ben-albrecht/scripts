@@ -1,0 +1,164 @@
+#!/usr/bin/env  python
+
+"""
+qread
+Run on a Q-Chem output to:
+    Parse and output specific outputs
+    Auto-generate plots of data
+    Auto-generate tables of data
+
+    TODO:
+    Combine qread and qparse under qcl.parse and qcl.plot
+"""
+
+import sys
+import os
+import argparse
+import re
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Or any other X11 back-end
+import matplotlib.pyplot as plt
+
+
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('outputfile', help='Q-Chem output file name')
+    opts = parser.parse_args(args)
+    return opts
+
+
+def grep_awk(lines, pattern, field = None):
+    """
+    python-equivalent of:
+    grep pattern | awk '{print field}'
+    """
+    regexpattern = ".* " + pattern + " .*"
+    matches = []
+    for line in lines:
+        regexsearch =  re.search(regexpattern, line)
+        if regexsearch:
+            if field == None:
+                matches.append(regexsearch.group(0))
+            else:
+                matches.append(regexsearch.group(0).split()[field - 1])
+
+    if matches:
+        return matches
+    else:
+        return None
+
+
+def convert(D):
+    data = []
+    for value in D:
+        data.append(D[value])
+    print "data", data
+    return data
+
+
+def plot(D):
+    if type(D) == type(dict()):
+        print "Converting data"
+        rows = D.keys()
+        D = convert(D)
+        print "rows:", rows
+    else:
+        pass #rows?
+
+    """
+    # Plot Type 1
+    plt.bar(range(len(D)), D, align='center')
+    plt.xticks(range(len(D)), rows )
+    plt.show()
+    plt.savefig("PLOT.pdf")
+    """
+
+    # Plot Type 2
+    colors = plt.cm.BuPu(np.linspace(0, 1, num=len(D)))
+    index = np.arange(len(rows)) # + 0.3
+    y_offset = np.array([0.0] * len(rows))
+    bar_width = 0.4
+
+    for element in D:
+        #print range(len(D))
+        plt.bar([0]*len(D), D, bottom=y_offset, color=colors[element])
+        y_offset = y_offset + element
+
+
+    #for row in D:
+    #    plt.bar(index, row, bar_width, bottom=y_offset, color=colors[row])
+    #    y_offset = y_offset + row
+        #cell_text.append(['%1.1f' % (x/1000.0) for x in y_offset])
+    # Reverse colors and text labels to display the last value at the top.
+    colors = colors[::-1]
+    #cell_text.reverse()
+
+    #plt.bar(range(len(D)), D, align='center')
+    #plt.xticks(range(len(D)), rows )
+    plt.show()
+    plt.savefig("PLOT.pdf")
+
+    """
+    n_rows = len(D)
+    columns = D.keys()
+
+    index = np.arange(len(columns)) + 0.3
+    bar_width = 0.4
+
+    y_offset = np.array([0.0] * len(columns))
+    for row in D:
+        plt.bar(index, D[row], bar_width, bottom=y_offset)
+        y_offset = y_offset + D[row]
+        cell_text.append(['%1.1f' % (x/1000.0) for x in y_offset])
+    """
+    ##smap = plt.matshow(matrix)
+    #plt.colorbar(smap)
+    #plt.subtitle("Thing")
+    #plt.show()
+
+
+
+if __name__ == '__main__':
+
+    opts = get_arguments()
+    work = os.getcwd()
+    outfile = opts.outputfile
+    stub, ext  = os.path.splitext(outfile)
+    subdir = os.path.join(work, stub + '_qread')
+    if not os.path.exists(subdir): os.makedirs(subdir)
+
+    with open(outfile, 'r') as handle:
+        # Read in file
+        lines = handle.readlines()
+
+        # Patterns to search regex for:
+        searches = {
+                    '1e'    : ['One\-Electron    Energy ='       , 4],
+                    'J'     : ['Total Coulomb   Energy ='        , 5],
+                    'X_tot' : ['Total Exchange  Energy ='        , 5],
+                    'X_dft' : ['DFT Exchange    Energy ='        , 5],
+                    'C_dft' : ['DFT Correlation Energy ='        , 5],
+                    'V_en'  : ['Nuclear Attr\.   Energy ='       , 5],
+                    'V_nn'  : ['Nuclear Repulsion Energy ='      , 5],
+                    'E_scf' : ['00000 Convergence criterion met' , 2]
+                   }
+
+
+        # Dict to hold the values of searches
+        results = { }
+
+        for pattern in searches:
+            matches =  grep_awk(lines, searches[pattern][0], searches[pattern][1])
+            if matches:
+                results[pattern] = abs(float(matches[-1]))
+
+
+        #print results
+
+        plot(results)
+
+
+
+
+
