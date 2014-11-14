@@ -46,6 +46,11 @@ if __name__ == '__main__':
     inp = opts.inputfile
     stub, ext  = os.path.splitext(inp)
     subdir = os.path.join(work, stub + '_inp')
+    if not os.path.isfile(inp) :
+        print "File", inp, "Not found"
+        print "Try 'cpg --help'"
+        exit(1)
+
     if not os.path.exists(subdir): os.makedirs(subdir)
 
     with open(inp, 'r') as handle:
