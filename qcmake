@@ -148,3 +148,6 @@ else
     esac
   fi
 fi
+
+
+spd-say --volume 100 "qcmake complete"
