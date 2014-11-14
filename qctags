@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Created using guide from
+#   http://ctags.sourceforge.net/faq.html#15
+
+# These tag files are trivial (and extremely quick) to rebuild while making changes within a directory.
+# The following Vim key mapping is quite useful to rebuild the tag file in the directory of the current source file:
+#        :nmap ,t :!(cd %:p:h;ctags *.[ch])&
+
+find * -type d -exec $HOME/repos/scripts/dirtags.sh {} \;
+
+ctags -R --fields=+fiSlm
+
+# ctags -R --C++-kinds=+p --C-kinds=+p --Fortran-kinds=+f --fields=+fiSlm --file-scope=no
+# ctags --file-scope=no -R
+# thus constructing a tag file containing only non-static tags for all source files in all descendent directories.
+# Configure your editor to read the local tag file first, then consult the global tag file when not found in the local tag file.
+# In Vim, this is done as follows: :set tags=./tags,tags,~/project/tags
