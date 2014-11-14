@@ -7,6 +7,16 @@ ReleaseConf="./configure release intel noopt2 mkl openmp"
 RelFastConf="./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 release mkl"
 FullConf="./configure release intel mkl openmp"
 DevConf="./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 debug mkl"
+gccConf="./configure gcc nointracule nomgc noopt2 nolibdftn nonewpath2 debug acml"
+
+
+
+link() {
+    mkdir $QC/exe 2> /dev/null
+    ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
+    ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
+    ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
+}
 
 if [[ -z $QC ]] ; then           # evaluates as true if $QC is not set
   echo "\$QC is not set!"
@@ -18,9 +28,7 @@ else
     echo "link qcprog.exe, and cronutils"
     cd $QC/build
     make -j2
-    ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
-    ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
-    ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
+    link
   else
     if [ $1 == "rel" ]; then
         $1 = "release"
@@ -43,11 +51,8 @@ else
 
         make generated_headers
         make -j4
+        link
 
-        mkdir $QC/exe 2> /dev/null
-        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
-        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
-        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
         ;;
       full)
         echo $FullConf
@@ -62,11 +67,8 @@ else
 
         make generated_headers
         make -j4
+        link
 
-        mkdir $QC/exe 2> /dev/null
-        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
-        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
-        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
         ;;
       dev)
         echo DevConf
@@ -84,11 +86,8 @@ else
 
         make generated_headers
         make -j4
+        link
 
-        mkdir $QC/exe 2> /dev/null
-        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
-        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
-        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
         ;;
       relfast)
         echo $RelFastConf
@@ -106,30 +105,49 @@ else
 
         make generated_headers
         make -j4
-
-        mkdir $QC/exe 2> /dev/null
-        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
-        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
-        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
+        link
         ;;
+
+    gcc)
+        echo gccConf
+        echo "optimization = 0"
+        echo "make generated_headers"
+        echo "make -j4"
+        echo "link qcprog.exe, and cronutils"
+
+        cd $QC
+        ./configure gcc nointracule nomgc noopt2 nolibdftn nonewpath2 debug acml
+        cd $QC/build
+
+        sed -i -e 's/-O2/-O0/g' $QC/build/CMakeCache.txt
+        sed -i -e 's/-O3/-O0/g' $QC/build/CMakeCache.txt
+
+        make generated_headers
+        make -j4
+        link
+        ;;
+
       help)
 
         echo "full    : $FullConf"
         echo "dev     : $DevConf"
         echo "rel     : $ReleaseConf"
         echo "relfast : $RelFastConf"
+        echo "gcc     : $gccConf"
         echo "*       : No Configure"
         ;;
+
       *)
         echo "Not configuring"
         echo "make -j2"
         echo "link qcprog.exe, and cronutils"
         cd $QC/build
         make -j2
-        ln -fs $QC/build/qcprog.exe         $QC/exe/qcprog.exe
-        ln -fs $QC/build/diffParseAlone.exe $QC/util/cronutil/diffParseAlone.exe
-        ln -fs $QC/build/mergeLines.exe     $QC/util/cronutil/mergeLines.exe
+        link
         ;;
     esac
   fi
 fi
+
+
+spd-say --volume 100 "qcmake complete"

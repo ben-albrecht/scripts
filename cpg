@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 """
-inp - an extended qchem input system
+cpg - an extended qchem input system
 
-Cartesian Product File Generator
+Cartesian Product Generator
 
 Will some day be a part of the qcl suite
 """
@@ -46,6 +46,11 @@ if __name__ == '__main__':
     inp = opts.inputfile
     stub, ext  = os.path.splitext(inp)
     subdir = os.path.join(work, stub + '_inp')
+    if not os.path.isfile(inp) :
+        print "File", inp, "Not found"
+        print "Try 'cpg --help'"
+        exit(1)
+
     if not os.path.exists(subdir): os.makedirs(subdir)
 
     with open(inp, 'r') as handle:
