@@ -23,14 +23,25 @@ else
         if [ -z $2 ]; then
             target="*.out"
         fi
+        # New Style (gen_scfman)
         for output in $target; do
             echo "***   Energy Components   ***"
-            grep -H ENuc $output | tail -1
-            grep -H E1 $output   | tail -1
-            grep -H EJ $output   | tail -1
-            grep -H EX $output   | tail -1
-            grep -H "\*\*\* EC" $target   | tail -1
+            grep -H "One-Electron    Energy = " $output | tail -1
+            grep -H "Total Coulomb   Energy = " $output | tail -1
+            grep -H "Total Exchange  Energy = " $output | tail -1
+            grep -H "DFT Exchange    Energy = " $output | tail -1
+            grep -H "DFT Correlation Energy = " $output | tail -1
+            grep -H "Nuclear Attr.   Energy = " $output | tail -1
         done
+        # Old Style (scfman)
+        #for output in $target; do
+        #    echo "***   Energy Components   ***"
+        #    grep -H ENuc $output | tail -1
+        #    grep -H E1 $output   | tail -1
+        #    grep -H EJ $output   | tail -1
+        #    grep -H EX $output   | tail -1
+        #    grep -H "\*\*\* EC" $target   | tail -1
+        #done
     else
         target=$1
     fi
@@ -46,9 +57,9 @@ if [ ! -z $scf ]; then
 fi
 if [ ! -z $ccsdt ]; then
     grep -H "CCSD total energy" $target | awk '{print $1, $6}'
-    echo "CCSD Energies:" 
+    echo "CCSD Energies:"
 fi
 if [ ! -z $mp2 ]; then
-    echo "MP2 Energies:" 
+    echo "MP2 Energies:"
     grep -H "MP2         total energy" $target | awk '{print $1, $6}'
 fi
