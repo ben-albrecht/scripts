@@ -2,6 +2,7 @@
 
 # Created using guide from
 #   http://ctags.sourceforge.net/faq.html#15
+# Requires exuberant-ctags (downloaded via Synaptic)
 
 # These tag files are trivial (and extremely quick) to rebuild while making changes within a directory.
 # The following Vim key mapping is quite useful to rebuild the tag file in the directory of the current source file:
