@@ -150,4 +150,5 @@ else
 fi
 
 
-spd-say --volume 100 "qcmake complete"
+aplay $HOME/repos/scripts/sounds/finish.wav > /dev/null 2>&1
+#spd-say --volume 10 "qcmake complete"
