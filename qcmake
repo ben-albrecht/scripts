@@ -24,10 +24,10 @@ if [[ -z $QC ]] ; then           # evaluates as true if $QC is not set
 else
   if [[ $# -eq 0 ]] ; then
     echo "Not configuring"
-    echo "make -j2"
+    echo "make -j4"
     echo "link qcprog.exe, and cronutils"
     cd $QC/build
-    make -j2
+    make -j4
     link
   else
     if [ $1 == "rel" ]; then
@@ -139,10 +139,10 @@ else
 
       *)
         echo "Not configuring"
-        echo "make -j2"
+        echo "make -j4"
         echo "link qcprog.exe, and cronutils"
         cd $QC/build
-        make -j2
+        make -j4
         link
         ;;
     esac
