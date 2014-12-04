@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+"""
+Obtain the optimized geometry of a Q-Chem geometry optimization job
+Return cartesian coords
+
+
+TODO:
+    option for z-matrix
+    option for output -> molpro or q-chem
+    option for input -> molpro or q-chem
+"""
+
+import os
+import argparse
+import imp
+rex = imp.load_source('rextract', '/home/ben/repos/scripts/rextract')
+
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('ofile', help='geometry optimization output file name to parse')
+    parser.add_argument('--inp', default='qchem', choices = ['qchem'], help='input file format')
+    parser.add_argument('--out', default='xyz', choices = ['xyz', 'molpro'], help='output file format')
+    parser.add_argument('--coords', default='cartesian', help='Type of coordinates (only cartesian allowed)')
+    opts = parser.parse_args(args)
+    return opts
+
+def formatted_print(optimizedgeometry, dataout, coords):
+    # Assume coords = cartesian for now
+    assert coords == 'cartesian'
+
+    try:
+        if dataout == 'molpro':
+            i = 1
+            for line in optimizedgeometry:
+                print("%4s%d %16.10f %16.10f %16.10f" % (line.split()[1], i, float(line.split()[2]), float(line.split()[3]), float(line.split()[4])))
+                i += 1
+        elif dataout == 'xyz':
+            print len(optimizedgeometry)
+            print "xyz comment line"
+            for line in optimizedgeometry:
+                print("%4s %16.10f %16.10f %16.10f" % (line.split()[1], float(line.split()[2]), float(line.split()[3]), float(line.split()[4])))
+    except:
+        print "getopt: incorrect format (geometry optimized likely failed)"
+
+
+def getopt(filename, inputtype='qchem', outputtype='xyz', coords='cartesian'):
+    optimizedgeometry = rex.rextract('ATOM ', 'Point Group', filename, occ=-1)
+    formatted_print(optimizedgeometry, outputtype, coords)
+        #print "    ".join(line.split()[1:])
+
+
+
+if __name__ == '__main__':
+    opts = get_arguments()
+    work = os.getcwd()
+    getopt(opts.ofile, opts.inp, opts.out)
+

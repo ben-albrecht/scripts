@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+"""
+rextract
+
+extract and output lines of a file between 2 regular expressions
+
+Usage:
+    rextract START END FILE
+"""
+
+import argparse
+import itertools
+
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('start', help='regex of starting pattern')
+    parser.add_argument('end', help='regex of ending pattern')
+    parser.add_argument('ofile', help='File to rextract')
+
+    parser.add_argument('--occ', default='all', help='Nth occurence (index starting at 0) where --occ=N (default = all)')
+
+    opts = parser.parse_args(args)
+    return opts
+
+def rextract(start, end, filename, occ='all'):
+    results = []
+    with open (filename) as handle:
+        occurence = list(itertools.takewhile(lambda x: end not in x,
+            itertools.dropwhile(lambda x: start not in x, handle)))
+        while occurence:
+            occurence.pop(0)
+            results.append(occurence)
+            occurence = list(itertools.takewhile(lambda x: end not in x,
+                itertools.dropwhile(lambda x: start not in x, handle)))
+
+    if not results:
+        return "rextract error No optimized geometry found"
+
+    if occ == 'all':
+        for result in results:
+            for i in range(len(result)):
+                result[i] = result[i].rstrip()
+        return results
+    else:
+        result = results[int(occ)]
+        for i in range(len(result)):
+            result[i] = result[i].rstrip()
+        return result
+
+
+
+if __name__ == '__main__':
+    opts = get_arguments()
+    result = rextract(opts.start, opts.end, opts.ofile, occ=opts.occ)
+    if opts.occ == 'all':
+        for element in result:
+            print ''
+            for line in element:
+                print line
+    else:
+        for line in result:
+            print line
+
