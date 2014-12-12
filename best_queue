@@ -1,0 +1,209 @@
+#!/bin/env python
+
+import sys, commands
+
+# Determines 'best' queue 
+USAGE = "\n \
+Usage:  best_queue  [options] \n \
+\n \
+Determines the 'best' queue for submission of a job with the specified resources.  \n \
+'Best' means the job will start most quickly. More metrics to come in the future. \n \
+\n \
+OPTIONS: \n \
+           -nodes            number of nodes \n \
+           -ppn              processors per node  \n \
+           -walltime         walltime (format: [dd:]hh:mm:ss) \n \
+           -memory           memory (in GB)       \n \
+           -disk             disk space (in GB) \n \
+           -verbose          print detailed information (True / False) \n \
+           -debug            print debug information (True / False) \n \
+           -h, --help        print help \n \
+\n \
+If best_queue is called without arguments, default settings will be used. A list \n \
+of default settings can be obtained with  \"-verbose True\". \n \
+"
+
+if len(sys.argv) % 2 != 1 or "-h" in sys.argv or "--help" in sys.argv:
+    print USAGE
+    sys.exit(0)
+
+#         name  
+#         min_nodes, max_nodes
+#         min_cores, max_cores, 
+#         min_mem (GB), max_mem (GB), 
+#         min_disk (GB), max_disk (GB), 
+#         max_cores_per_user, 
+#         cost, 
+#         max_walltime (h)
+Queues = {
+          'shared':         [1,  1,  1,  48, 0,  32,   1,  150,  96, 0.5, 144],
+          'test':           [1,  4,  1,   8, 0,  12,   0,  230,  16, 1.0,   2], # sort by cost
+          'distributed':    [2, 12, 12, 144, 0,   4, 905,  905, 144, 1.0, 144],
+          'dist_small':     [1,  6, 12,  72, 0,   4, 905,  905,  72, 1.0,  12],
+          'shared_large':   [1,  1,  1,  16, 0,  63, 113, 1811,  96, 1.5, 144],
+          'shared_heavy':   [1,  1,  1,  16, 8, 126, 171, 2738,  32, 1.5, 144],
+          'dist_big':       [4, 18, 16, 288, 0,   4, 905,  905, 288, 1.5, 144],
+          'dist_fast':      [4, 12, 16, 192, 0,   8, 905,  905, 192, 1.5, 144],
+          'dist_ivy':       [4, 10, 16, 160, 0,   4, 905,  905, 160, 1.5, 144]
+}
+
+
+Settings = {'-nodes': 1,
+            '-ppn': 1,
+            '-walltime': '1:00:00',
+            '-memory': 1,
+            '-disk': 1,
+            '-verbose': False, 
+            '-debug': False
+}
+
+for i in range(1, len(sys.argv), 2):
+    arg = sys.argv[i]
+    val = sys.argv[i+1]
+    if arg in Settings:
+        Settings[arg] = val
+    else:
+        print USAGE
+        sys.exit(1)
+    #print "arg = ", arg
+    #print "val = ", val
+
+if Settings['-verbose'] == True:
+    print "Default settings:"
+    print Settings
+    print 
+
+Settings['-nodes'] = int( Settings['-nodes'] )
+Settings['-ppn'] = int( Settings['-ppn'] )
+Settings['-memory'] = int( Settings['-memory'] )
+Settings['-disk'] = int( Settings['-disk'] )
+Settings['-verbose'] = bool( Settings['-verbose'] )
+
+if Settings['-debug'] == True:
+    print "Settings:", Settings
+
+def inrange(min, value, max):
+    #print "value = ", value
+    #print "min = ", min
+    #print "max = ", max
+    return (value >= min) and (value <= max)
+
+def time2sec(walltime):
+
+    if walltime == "INFINITY":
+        return 10000000
+
+    TL = walltime.split(":")
+    #print "walltime = ", walltime
+
+    Conversion = [86400, 3600, 60, 1]
+    time = 0
+
+    Nfields = len( TL )
+    #print "Nfields = ", Nfields
+    if Nfields == 3:
+        TL.insert(0, "0")
+
+    for i in range(3, -1, -1):
+        x = int(TL[i])
+        fac = Conversion[i]
+        time +=  x * fac
+        #print "i = ", i, "  x = ", x, "  fac = ", fac
+
+    #print "time in seconds = ", time
+
+    return time
+
+
+# Find queues that would accept the job
+Matches = []
+total_cores = Settings['-nodes'] * Settings['-ppn']
+for queue in sorted(Queues):
+   
+    q = Queues[queue]
+   
+
+    accept = inrange(q[0], Settings['-nodes'], q[1])
+    accept = accept and inrange(q[2], Settings['-ppn'], q[3])
+    accept = accept and inrange(q[2], total_cores, q[3])
+    accept = accept and inrange(0, time2sec(Settings['-walltime']), q[10]*3600)
+    accept = accept and inrange(q[4], Settings['-memory'], q[5])
+
+    if Settings['-verbose'] == True:
+        print "queue ", queue, ": ", accept
+    if accept:
+        Matches.append(queue)
+
+
+if len(Matches) == 0:
+    print "No matching queue found."
+    sys.exit(1)
+
+
+# Find wait time for each queue
+
+wait_time_sec = 10000000
+wait_time = ""
+best_q = ""
+
+# Make sure the test queue is 1st in list:
+# We will use the test queue if nothing else is available, 
+# but use other queues if they're available.
+if "test" in Matches:
+    tmp = Matches[0]
+    idx = Matches.index("test")
+    Matches[0] = Matches[idx]
+    Matches[idx] = tmp
+
+for q in Matches:
+    if Settings['-verbose'] == True:
+        print "\nqueue = ", q
+
+        
+    if q == "test":
+        # Pretend that the test queue is always empty (for now, TODO) 
+        output = [0, 0, str(total_cores) + " 2 " + Settings['-walltime'] + " 00:00:00  00:00:00"]
+    else:
+        output = str(commands.getstatusoutput('frank-avail ' + q)[1]).split("\n")
+
+
+    for line in output[2:]:
+        line = str(line)
+        
+        if Settings['-debug'] == True:
+            print line
+
+        Tokens = line.split()
+        cores = int(Tokens[0])
+        nodes = int(Tokens[1])
+        wall = Tokens[2]
+        wait = Tokens[3]
+        start = Tokens[4]
+
+        t_requested = time2sec(Settings['-walltime'])
+        t_avail = time2sec(wall)
+        t_wait = time2sec(wait)
+        #print "t_requested = ", t_requested
+        #print "t_avail = ", t_avail
+        #print "t_wait = ", t_wait
+
+        if cores > total_cores and t_requested <= t_avail:
+            
+            if Settings['-verbose'] == True:
+                print "  requested ", total_cores, " core(s)"
+                print "  requested ", Settings['-walltime'], " walltime"
+                print "  available: ", cores, " cores @ ", wall, " walltime. Estimated wait time: ", wait
+
+                
+            if t_wait <= wait_time_sec: 
+                wait_time_sec = t_wait
+                best_q = q                
+                wait_time = wait
+                #print "best = ", q
+                #print "wait = ", wait_time
+           
+            break
+
+if Settings['-verbose'] == True:
+    print "\nBest queue:"
+print best_q, "  Estimated wait time: ", wait_time

@@ -1,10 +1,47 @@
-#!/bin/env python
+#!/usr/bin/env python
+# encoding: utf-8
 
-# This script submits Q-Chem jobs to the queue
-# Written by DSL
+"""
+This script submits Q-Chem jobs to the queue
+Authors: Daniel   Lambrecht (original)
+         Benjamin Albrecht (rewritten)
+
+
+New version requires Python 2.7+ (for argparse)
+"""
 
 import os, sys, grp, pwd, getpass, commands
 from subprocess import call
+
+try:
+        import argparse
+except ImportError:
+        raise ImportError('Unable to import argparse, make sure you are using Python 2.7+')
+
+
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser(prog='submit',
+                                     usage= "%(prog)s job [options] ",
+                                     description = ''' %(prog)s is a script that auto-generates a pbs
+                                     file and submits a job, utilizing another script, best_queue, which determines
+                                     the best queue to submit for minimizing wait times '''
+                                    )
+
+    parser.add_argument('job', help='Fil')
+    parser.add_argument('--ppn',      type=int,  default=1, help='number of processors')
+    parser.add_argument('--nodes',    type=int,  default=1, help='number of nodes')
+    parser.add_argument('--queue',    type=str,  default='auto')
+    parser.add_argument('--walltime',            default='1:00:00')
+    parser.add_argument('--qos',                 default='low', help='priority')
+    parser.add_argument('--account',             default=def_account )
+    parser.add_argument('--path',                default=def_path)
+    parser.add_argument('--save',     type=bool, default=False)
+    parser.add_argument('--dry',      type=bool, default=False)
+    parser.add_argument('--investor', type=bool, default=True)
+
+    opts = parser.parse_args(args)
+
+    return opts
 
 ### Default settings ###
 
@@ -23,7 +60,7 @@ qchem_dir = '/home/dlambrecht/software'
 all_subdirs = [qchem_dir + "/" + d for d in os.listdir(qchem_dir) if not os.path.isfile(d) and "qchem" in d and "trunk" in d]
 latest_subdir = max(all_subdirs, key=os.path.getmtime)
 def_path = latest_subdir # default version
-Settings = {'-ppn': '1', 
+Settings = {'-ppn': '1',
             '-nodes': '1',
             '-queue': 'auto',
             '-walltime': '1:00:00',
@@ -31,10 +68,10 @@ Settings = {'-ppn': '1',
             '-account': def_account,
             '-path': def_path,
             '-save': 'off',
-            '-dry': 'off', 
+            '-dry': 'off',
             '-investor': True
 }
- 
+
 
 ### Print USAGE information ###
 USAGE = "\n \
