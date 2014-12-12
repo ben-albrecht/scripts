@@ -21,7 +21,47 @@ import math
 import itertools
 
 def get_arguments(args=None):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='Cartesian Product Generator',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     usage= "cpg [options] inputfile",
+                                     description = ''' %(prog)s
+    Generates a cartesian product of different options given in a file
+    and creates a unique input for each set of different options
+
+    Provide options in a file with the following syntax:
+    $(option1, option2, option3)
+
+    Example:
+
+    == File.in ==
+    ...
+    $(option1, option2)
+    $(option3, option4)
+    ...
+
+    == Generated Outputs ==
+    === File_inp/File.option1.option3.in ===
+    ...
+    option1
+    option3
+    ...
+    === File_inp/File.option2.option3.in  ===
+    ...
+    option2
+    option3
+    ...
+    === File_inp/File.option1.option4.in  ===
+    ...
+    option1
+    option4
+    ...
+    === File_inp/File.option2.option4.in  ===
+    ...
+    option2
+    option4
+    ...
+    '''
+    )
     parser.add_argument('inputfile', help='Q-Chem input file name')
     opts = parser.parse_args(args)
     return opts
