@@ -1,8 +1,10 @@
-#!/bin/env python
+#!/usr/bin/env python
+# encoding: utf-8
+
 
 import sys, commands
 
-# Determines 'best' queue 
+# Determines 'best' queue
 USAGE = "\n \
 Usage:  best_queue  [options] \n \
 \n \
@@ -27,13 +29,13 @@ if len(sys.argv) % 2 != 1 or "-h" in sys.argv or "--help" in sys.argv:
     print USAGE
     sys.exit(0)
 
-#         name  
+#         name
 #         min_nodes, max_nodes
-#         min_cores, max_cores, 
-#         min_mem (GB), max_mem (GB), 
-#         min_disk (GB), max_disk (GB), 
-#         max_cores_per_user, 
-#         cost, 
+#         min_cores, max_cores,
+#         min_mem (GB), max_mem (GB),
+#         min_disk (GB), max_disk (GB),
+#         max_cores_per_user,
+#         cost,
 #         max_walltime (h)
 Queues = {
           'shared':         [1,  1,  1,  48, 0,  32,   1,  150,  96, 0.5, 144],
@@ -53,7 +55,7 @@ Settings = {'-nodes': 1,
             '-walltime': '1:00:00',
             '-memory': 1,
             '-disk': 1,
-            '-verbose': False, 
+            '-verbose': False,
             '-debug': False
 }
 
@@ -71,7 +73,7 @@ for i in range(1, len(sys.argv), 2):
 if Settings['-verbose'] == True:
     print "Default settings:"
     print Settings
-    print 
+    print
 
 Settings['-nodes'] = int( Settings['-nodes'] )
 Settings['-ppn'] = int( Settings['-ppn'] )
@@ -119,9 +121,9 @@ def time2sec(walltime):
 Matches = []
 total_cores = Settings['-nodes'] * Settings['-ppn']
 for queue in sorted(Queues):
-   
+
     q = Queues[queue]
-   
+
 
     accept = inrange(q[0], Settings['-nodes'], q[1])
     accept = accept and inrange(q[2], Settings['-ppn'], q[3])
@@ -147,7 +149,7 @@ wait_time = ""
 best_q = ""
 
 # Make sure the test queue is 1st in list:
-# We will use the test queue if nothing else is available, 
+# We will use the test queue if nothing else is available,
 # but use other queues if they're available.
 if "test" in Matches:
     tmp = Matches[0]
@@ -159,9 +161,9 @@ for q in Matches:
     if Settings['-verbose'] == True:
         print "\nqueue = ", q
 
-        
+
     if q == "test":
-        # Pretend that the test queue is always empty (for now, TODO) 
+        # Pretend that the test queue is always empty (for now, TODO)
         output = [0, 0, str(total_cores) + " 2 " + Settings['-walltime'] + " 00:00:00  00:00:00"]
     else:
         output = str(commands.getstatusoutput('frank-avail ' + q)[1]).split("\n")
@@ -169,7 +171,7 @@ for q in Matches:
 
     for line in output[2:]:
         line = str(line)
-        
+
         if Settings['-debug'] == True:
             print line
 
@@ -188,20 +190,20 @@ for q in Matches:
         #print "t_wait = ", t_wait
 
         if cores > total_cores and t_requested <= t_avail:
-            
+
             if Settings['-verbose'] == True:
                 print "  requested ", total_cores, " core(s)"
                 print "  requested ", Settings['-walltime'], " walltime"
                 print "  available: ", cores, " cores @ ", wall, " walltime. Estimated wait time: ", wait
 
-                
-            if t_wait <= wait_time_sec: 
+
+            if t_wait <= wait_time_sec:
                 wait_time_sec = t_wait
-                best_q = q                
+                best_q = q
                 wait_time = wait
                 #print "best = ", q
                 #print "wait = ", wait_time
-           
+
             break
 
 if Settings['-verbose'] == True:
