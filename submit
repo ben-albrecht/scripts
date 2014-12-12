@@ -1,0 +1,180 @@
+#!/bin/env python
+
+# This script submits Q-Chem jobs to the queue
+# Written by DSL
+
+import os, sys, grp, pwd, getpass, commands
+from subprocess import call
+
+### Default settings ###
+
+# Determine default billing account
+# ... first, determine group(s) that the user belongs to
+user = getpass.getuser()
+groups = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+gid = pwd.getpwnam(user).pw_gid
+groups.append(grp.getgrgid(gid).gr_name)
+# ... then pick the first group as the billing account (most likely the PI's # name)
+def_account = groups[0] # default billing account
+
+# Determine default Q-Chem version
+# ... we pick the latest version of the Q-Chem trunk
+qchem_dir = '/home/dlambrecht/software'
+all_subdirs = [qchem_dir + "/" + d for d in os.listdir(qchem_dir) if not os.path.isfile(d) and "qchem" in d and "trunk" in d]
+latest_subdir = max(all_subdirs, key=os.path.getmtime)
+def_path = latest_subdir # default version
+Settings = {'-ppn': '1', 
+            '-nodes': '1',
+            '-queue': 'auto',
+            '-walltime': '1:00:00',
+            '-qos': 'low',
+            '-account': def_account,
+            '-path': def_path,
+            '-save': 'off',
+            '-dry': 'off', 
+            '-investor': True
+}
+ 
+
+### Print USAGE information ###
+USAGE = "\n \
+Usage:  submit  input-file [options] \n \
+\n \
+OPTIONS: \n \
+                -nodes      #nodes \n \
+                -ppn        #cores_per_node \n \
+                -queue      queue (default: select 'best' queue automatically)\n \
+                -walltime   [dd:]hh:mm:mm \n \
+                -qos        reduce billing for low priority jobs (default: " + Settings['-qos'] + ") \n \
+                -path       qchem_path (default: " + Settings['-path'] + ") \n \
+                -account    billing account (default: " + Settings['-account'] + ") \n \
+                -save       save scratch data \n \
+                -dry        only create run script, don't submit \n \
+                -print      print default values for all options \n \
+"
+
+if len(sys.argv) < 2:
+    print USAGE
+    sys.exit(1)
+
+# TODO: Pick best queue for job type and available resources
+
+
+if "-print" in sys.argv:
+    print "Default values:"
+    for key in Settings:
+      print "  ", key, " = ", Settings[key]
+    sys.exit(0)
+
+
+# Read in command line arguments
+my_name = sys.argv.pop(0)
+#print "my_name = ", my_name
+ifile = sys.argv.pop(0)
+#print "ifile = ", ifile
+
+for i in range( 0, len(sys.argv), 2 ):
+    arg = sys.argv[i]
+    val = sys.argv[i+1]
+    #print "arg = ", arg
+    #print "val = ", val
+    if arg in Settings:
+        Settings[arg] = val
+    else: # TODO this doesn't seem to work yet
+        print arg + ": Invalid option."
+        sys.exit(1)
+
+# Create job name
+job_name = ifile.replace(".in", "")
+job_name = job_name.replace(".n", "")
+print "job name = ", job_name
+Settings['-name'] = job_name
+
+
+# Automatic selection of submission queue
+if Settings['-queue'] == "auto":
+
+    settings = ""
+
+    status = commands.getstatusoutput('best_queue ' + settings)
+    if "sh:" in status[1]:
+        print "Error running best_queue script:"
+        print status
+        sys.exit(1)
+
+    output = str(status[1]).split("\n")
+
+
+    queue = output[0].split()[0]
+    wait = output[0].split()[4]
+    print output
+
+    # Signal that we're 'investors' on Frank
+    if Settings['-investor'] == True:
+        if not queue == "test":
+            queue = "i" + queue
+
+    print "Best submission queue: ", queue
+    print "Estimated wait time: ", wait
+
+    Settings['-queue'] = queue
+
+
+
+# Create unique ID for job
+import uuid
+JOB_ID = uuid.uuid4().hex # a unique id for the current job
+RUN = ".run.sh_" + JOB_ID
+#print "run script = ", RUN
+
+
+# Write submission script
+file = open(RUN, "w")
+
+file.write("#!/bin/bash\n")
+file.write("\n")
+file.write("#PBS -N " + Settings['-name'] + "\n")
+file.write("#PBS -l nodes=" + Settings['-nodes'] + ":ppn=" + Settings['-ppn'] + "\n")
+file.write("#PBS -l walltime=" + Settings['-walltime'] + "\n")
+file.write("#PBS -q " + Settings['-queue'] + "\n")
+file.write("#PBS -l qos=" + Settings['-qos'] + "\n")
+file.write("#PBS -A " + Settings['-account'] + "\n")
+file.write("\n")
+file.write("JOBNAME=" + Settings['-name'] + "\n")
+file.write("NODES=" + Settings['-nodes'] + "\n")
+file.write("PPN=" + Settings['-ppn'] + "\n")
+file.write("\n")
+file.write("cp ${PBS_O_WORKDIR}/${JOBNAME}.in ${LOCAL}\n")
+file.write("cd ${LOCAL}\n")
+file.write("\n")
+file.write("# Load Q-Chem environment variables ...\n")
+file.write(". " + Settings['-path'] + "/qcrc\n")
+file.write("\n")
+
+parallel_string = ""
+if int(Settings['-nodes']) > 1:
+    total_cores = str( int(Settings['-nodes']) * int(Settings['-ppn']) )
+    parallel_string = "-np " + Settings['-nodes'] + " -nt " + Settings['-ppn']
+elif int(Settings['-ppn']) > 1:
+    parallel_string = "-nt ${PPN}"
+
+save_string = ""
+if Settings['-save'] == "on":
+    save_string = " -save "
+
+#file.write("touch ${JOBNAME}.out\n")
+#file.write("ln ${JOBNAME}.out ${PBS_O_WORKDIR}/${JOBNAME}.out\n")
+file.write("\n")
+file.write("qchem " + parallel_string + save_string + " ${JOBNAME}.in ${PBS_O_WORKDIR}/${JOBNAME}.out ${JOBNAME}." + JOB_ID + "\n")
+file.write("\n")
+
+if Settings['-save'] == "on":
+    file.write("cp -r ${LOCAL}/* ${PBS_O_WORKDIR}/\n")
+
+file.write("rm ${PBS_O_WORKDIR}/" + RUN + "\n")
+
+file.close()
+
+#qsub ${RUN}
+if Settings['-dry'] == 'off':
+    call(["qsub", RUN])
