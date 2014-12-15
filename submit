@@ -156,8 +156,7 @@ def main():
 
 
         queue = output[0].split()[0]
-        wait = 1
-        #wait = output[0].split()[4]
+        wait = output[0].split()[4]
         print output
 
         # Signal that we're 'investors' on Frank
