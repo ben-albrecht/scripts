@@ -10,33 +10,93 @@ try:
 except ImportError:
     raise ImportError('Unable to import all libraries')
 
-#
-#class qcdata(ccdata):
-#
-#    """sub-class of ccdata with plot data"""
-#
-#    def __init__(self, *args, **kwargs):
-#        """Initialize
-#
-#
-#        """
-#        ccdata.__init__(self, *args, **kwargs)
+
+def figs(opts):
+    """
+    Determine type of output from opts or file
+    Call appropriate function
+    """
+
+    if type(opts.fname) == str:
+        # Assuming ccinput is a filename
+        data = cclib.parser.ccopen(opts.fname).parse()
+    else:
+        data = opts.fname
+        assert type(data) == cclib.parser.data.ccData_optdone_bool or type(data) == cclib.parser.data.ccData
+
+    # TODO: determine what kind of job (opt, sp, freq)
+        # auto = automatically determine
+        # or get from opts.job
+    if opts.job == 'auto':
+        print opts.job, "not yet implemented"
+    elif opts.job == 'opt':
+        _opt(data)
+    elif opts.job == 'sp':
+        _sp(data)
+    elif opts.job == 'vib':
+        print opts.job, "not yet implemented"
+    else:
+        print opts.job, "not yet implemented"
+
+    return
 
 
-def opt(ccinput):
-    """Generate plots of convergence criteria, and energy vs. optimization cycles
+def _sp(data):
+    """
+    Generate plots of convergence criteria, and energy vs. optimization cycles
+
+    :job: ccdata object, or file
+    :returns: TODO
+
+    """
+    # TODO scfenergies, scfvalues, scftargets vs. scf cycles
+    print "\n\n"
+    print "Optimization Converged: ", data.optdone
+
+
+    criteria = [0,0,0]
+    criteria[0] = [x[0] for x in data.scfvalues]
+    criteria[1] = [x[1] for x in data.scfvalues]
+    criteria[2] = [x[2] for x in data.scfvalues]
+    idx = np.arange(len(criteria[0]))
+
+    # Plot Geometry Optimization Criteria for Convergence over opt cycles
+    plt.plot(idx, criteria[0], label='Gradient')
+    plt.plot(idx, criteria[1], label='Displacement')
+    plt.plot(idx, criteria[2], label='Energy Change')
+
+    # Plot target criteria for convergence
+    plt.axhline(y=data.scftargets[0])
+    plt.yscale('log')
+
+    plt.title("Optimization Convergence Analysis")
+    plt.xlabel("Optimization Cycle")
+    plt.legend()
+
+    plt.show()
+
+   # idx = np.arange(len(data.scfenergies))
+   # plt.plot(idx, data.scfenergies, label='SCF Energy (eV)')
+   # plt.show
+
+    pass
+
+
+
+
+def _opt(data):
+    """
+    Generate plots of convergence criteria, and energy vs. optimization cycles
 
     :job: ccdata object, or file
     :returns: TODO
 
     """
 
-    if type(ccinput) == str:
-        # Assuming ccinput is a filename
-        data = cclib.parser.ccopen(ccinput).parse()
-    else:
-        data = ccinput
-        assert type(data) == cclib.parser.data.ccData_optdone_bool
+
+    print "\n\n"
+    print "Optimization Converged: ", data.optdone
+
 
     criteria = [0,0,0]
     criteria[0] = [x[0] for x in data.geovalues]
@@ -53,33 +113,18 @@ def opt(ccinput):
     plt.axhline(y=data.geotargets[0])
     plt.yscale('log')
 
-
     plt.title("Optimization Convergence Analysis")
     plt.xlabel("Optimization Cycle")
-
     plt.legend()
+
     plt.show()
 
     idx = np.arange(len(data.scfenergies))
     plt.plot(idx, data.scfenergies, label='SCF Energy (eV)')
     plt.show
 
+    # TODO plot scfenergies vs. cycles
 
 
 
-
-
-
-def main():
-    """
-    Main function
-    TODO - Determine jobtype using cclib
-    """
-
-    opt("ts1.3.0.out")
-
-
-
-
-if __name__ == '__main__':
-    main()
+    return

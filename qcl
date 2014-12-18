@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+import argparse
+import os
+
+#import qvalgrind
+
+# So that we can use these scripts without adding scripts/libs/python to $PYTHONPATH
+#import sys
+#import os
+#sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+import qcl
+
+
+
+
+# qcl main script
+# Quantum Chemistry Lab utilities (qcl)
+
+def get_arguments(args=None):
+    """
+    Parse arguments
+    :returns: opts
+    """
+
+    parser = argparse.ArgumentParser(prog='qcl')
+    subparsers = parser.add_subparsers(help="sub-commands")
+
+    parser_figs = subparsers.add_parser('figs', help='Quick Figure Generation')
+    parser_figs.add_argument('fname', help='filename')
+    parser_figs.add_argument('--prog', type=str, default = 'qchem', help='Type of comp chem language')
+    parser_figs.add_argument('--job', type=str, default='auto', help='Type of job')
+    parser_figs.set_defaults(func=qcl.figs.figs)
+
+    #parser.add_argument(dest='ifile', help='Command')
+    #parser.add_argument('--verbose', action='store_true', help='increase verbosity')
+    #parser.add_argument('--bins', default=0, type=int, help='number of bins')
+
+    opts = parser.parse_args(args)
+    return opts
+
+def figs(opts):
+    """Testing passing arguments
+
+    :returns: TODO
+
+    """
+
+    print "Plot opt_convergence data of", opts.fname
+    return
+
+
+if __name__ == '__main__':
+    work = os.getcwd()
+    opts = get_arguments()
+
+    opts.func(opts)
+

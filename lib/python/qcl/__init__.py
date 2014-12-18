@@ -1,1 +1,1 @@
-import plot
+import figs
