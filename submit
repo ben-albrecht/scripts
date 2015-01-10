@@ -8,6 +8,10 @@ Authors: Daniel   Lambrecht (original)
 
 
 New version requires Python 2.7+ (for argparse)
+
+TODO:
+    - Allocate max ppn for queue selected
+    - Improve optimal queue selection
 """
 
 import os, sys, grp, pwd, getpass, commands
@@ -22,6 +26,9 @@ except ImportError:
 
 
 def get_arguments(args=None):
+    """
+    Get arguments from user
+    """
 
     ### Default Settings ###
     # Determine default billing account
@@ -48,100 +55,32 @@ def get_arguments(args=None):
                                      usage= "%(prog)s job [options] ",
                                      description = ''' %(prog)s is a script that auto-generates a pbs
                                      file and submits a job, utilizing another script, best_queue, which determines
-                                     the best queue to submit for minimizing wait times '''
+                                     the best queue to submit for minimizing wait times ''',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                     )
 
 
-    parser.add_argument('job', help='Fil')
+    parser.add_argument('job', help='Input File')
+    parser.add_argument('--program',    type=str,  default='qchem', help='program to run on input file')
     parser.add_argument('--ppn',      type=int,  default=1, help='number of processors')
     parser.add_argument('--nodes',    type=int,  default=1, help='number of nodes')
-    parser.add_argument('--queue',    type=str,  default='auto')
-    parser.add_argument('--walltime', type=str,  default='1:00:00')
+    parser.add_argument('--queue',    type=str,  default='auto', help='queue to submit to')
+    parser.add_argument('--walltime', type=str,  default='1:00:00', help='walltime in HH:MM:SS format')
     parser.add_argument('--qos',      type=str,  default='low', help='priority')
-    parser.add_argument('--account',  type=str,  default=def_account )
-    parser.add_argument('--path',     type=str,  default=def_path)
-    parser.add_argument('--save',     type=bool, default=False)
-    parser.add_argument('--dry',      type=bool, default=False)
-    parser.add_argument('--investor', type=bool, default=True)
+    parser.add_argument('--account',  type=str,  default=def_account, help='account with Gold on Frank' )
+    parser.add_argument('--path',     type=str,  default=def_path, help='path to program')
+    parser.add_argument('--save',     type=bool, default=False, help='Save PBS file when True')
+    parser.add_argument('--dry',      type=bool, default=False, help='Do not run qsub on PBS file when True')
+    parser.add_argument('--investor', type=bool, default=True, help='Add prefix "i" to queue name if you are an investor group')
 
     opts = parser.parse_args(args)
 
     return opts
 
-
-def main():
-    # Get arguments using argparse
-    opts = get_arguments()
-    ifile = opts.job
-
-   # Settings = {'-ppn': '1',
-   #             '-nodes': '1',
-   #             '-queue': 'auto',
-   #             '-walltime': '1:00:00',
-   #             '-qos': 'low',
-   #             '-account': def_account,
-   #             '-path': def_path,
-   #             '-save': 'off',
-   #             '-dry': 'off',
-   #             '-investor': True
-   # }
-
-
-#    ### Print USAGE information ###
-#    USAGE = "\n \
-#    Usage:  submit  input-file [options] \n \
-#    \n \
-#    OPTIONS: \n \
-#                    -nodes      #nodes \n \
-#                    -ppn        #cores_per_node \n \
-#                    -queue      queue (default: select 'best' queue automatically)\n \
-#                    -walltime   [dd:]hh:mm:mm \n \
-#                    -qos        reduce billing for low priority jobs (default: " + Settings['-qos'] + ") \n \
-#                    -path       qchem_path (default: " + Settings['-path'] + ") \n \
-#                    -account    billing account (default: " + Settings['-account'] + ") \n \
-#                    -save       save scratch data \n \
-#                    -dry        only create run script, don't submit \n \
-#                    -print      print default values for all options \n \
-#    "
-#
-#    if len(sys.argv) < 2:
-#        print USAGE
-#        sys.exit(1)
-
-    # TODO: Pick best queue for job type and available resources
-
-
-#    if "-print" in sys.argv:
-#        print "Default values:"
-#        for key in Settings:
-#          print "  ", key, " = ", Settings[key]
-#        sys.exit(0)
-
-
-    # Read in command line arguments
-    #my_name = sys.argv.pop(0)
-    #print "my_name = ", my_name
-    #ifile = sys.argv.pop(0)
-    #print "ifile = ", ifile
-
-    #for i in range( 0, len(sys.argv), 2 ):
-    #    arg = sys.argv[i]
-    #    val = sys.argv[i+1]
-    #    #print "arg = ", arg
-    #    #print "val = ", val
-    #    if arg in Settings:
-    #        Settings[arg] = val
-    #    else: # TODO this doesn't seem to work yet
-    #        print arg + ": Invalid option."
-    #        sys.exit(1)
-
-    # Create job name
-    job_name = ifile.replace(".in", "")
-    job_name = job_name.replace(".n", "")
-    print "job name = ", job_name
-
-
-    # Automatic selection of submission queue
+def choosequeue (opts):
+    """
+    Automatic selection of submission queue
+    """
     if opts.queue == "auto":
 
         settings = ""
@@ -167,17 +106,22 @@ def main():
         print "Best submission queue: ", queue
         print "Estimated wait time: ", wait
 
-        opts.queue = queue
+        return queue
+
+    else:
+        return opts.queue
 
 
+def writepbs(opts, job_name):
+    """
+    Write submission script
+    """
 
     # Create unique ID for job
     JOB_ID = uuid4().hex # a unique id for the current job
     RUN = ".run.sh_" + JOB_ID
     #print "run script = ", RUN
 
-
-    # Write submission script
     file = open(RUN, "w")
 
     file.write("#!/bin/bash\n")
@@ -193,8 +137,9 @@ def main():
     file.write("NODES=" + str(opts.nodes) + "\n")
     file.write("PPN=" + str(opts.ppn) + "\n")
     file.write("\n")
-    file.write("cp ${PBS_O_WORKDIR}/${JOBNAME}.in ${LOCAL}\n")
-    file.write("cd ${LOCAL}\n")
+    file.write("cd ${PBS_O_WORKDIR}\n")
+    #file.write("cp ${PBS_O_WORKDIR}/${JOBNAME}.in ${LOCAL}\n")
+    #file.write("cd ${LOCAL}\n")
     file.write("\n")
     file.write("# Load Q-Chem environment variables ...\n")
     file.write(". " + opts.path + "/qcrc\n")
@@ -203,7 +148,7 @@ def main():
     parallel_string = ""
     if int(opts.nodes) > 1:
         total_cores = str( int(opts.nodes) * int(opts.ppn) )
-        parallel_string = "-np " + opts.nodes + " -nt " + opts.ppn
+        parallel_string = "-np " + str(opts.nodes) + " -nt " + str(opts.ppn)
     elif int(opts.ppn) > 1:
         parallel_string = "-nt ${PPN}"
 
@@ -224,9 +169,30 @@ def main():
 
     file.close()
 
+    return RUN
+
+
+def main():
+    # TODO: Pick best queue for job type and available resources
+
+    # Get arguments using argparse
+    opts = get_arguments()
+
+    # Create job name
+    job_name = opts.job.replace(".in", "")
+    job_name = job_name.replace(".n", "")
+    print "job name = ", job_name
+
+    # Choose optimal queue
+    opts.queue = choosequeue(opts)
+
+    # Write batch script file
+    RUN = writepbs(opts, job_name)
+
     #qsub ${RUN}
     if opts.dry == False:
         call(["qsub", RUN])
+
 
 if __name__ == '__main__':
     main()
