@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+from __future__ import print_function
 
-import sys, commands
+import sys, subprocess
 
 # Determines 'best' queue
 USAGE = "\n \
@@ -26,7 +27,7 @@ of default settings can be obtained with  \"-verbose True\". \n \
 "
 
 if len(sys.argv) % 2 != 1 or "-h" in sys.argv or "--help" in sys.argv:
-    print USAGE
+    print(USAGE)
     sys.exit(0)
 
 #         name
@@ -65,15 +66,15 @@ for i in range(1, len(sys.argv), 2):
     if arg in Settings:
         Settings[arg] = val
     else:
-        print USAGE
+        print(USAGE)
         sys.exit(1)
     #print "arg = ", arg
     #print "val = ", val
 
 if Settings['-verbose'] == True:
-    print "Default settings:"
-    print Settings
-    print
+    print("Default settings:")
+    print(Settings)
+    print("")
 
 Settings['-nodes'] = int( Settings['-nodes'] )
 Settings['-ppn'] = int( Settings['-ppn'] )
@@ -82,7 +83,7 @@ Settings['-disk'] = int( Settings['-disk'] )
 Settings['-verbose'] = bool( Settings['-verbose'] )
 
 if Settings['-debug'] == True:
-    print "Settings:", Settings
+    print("Settings:", Settings)
 
 def inrange(min, value, max):
     #print "value = ", value
@@ -132,13 +133,13 @@ for queue in sorted(Queues):
     accept = accept and inrange(q[4], Settings['-memory'], q[5])
 
     if Settings['-verbose'] == True:
-        print "queue ", queue, ": ", accept
+        print("queue ", queue, ": ", accept)
     if accept:
         Matches.append(queue)
 
 
 if len(Matches) == 0:
-    print "No matching queue found."
+    print("No matching queue found.")
     sys.exit(1)
 
 
@@ -159,21 +160,23 @@ if "test" in Matches:
 
 for q in Matches:
     if Settings['-verbose'] == True:
-        print "\nqueue = ", q
+        print("\nqueue = ", q)
 
 
     if q == "test":
         # Pretend that the test queue is always empty (for now, TODO)
         output = [0, 0, str(total_cores) + " 2 " + Settings['-walltime'] + " 00:00:00  00:00:00"]
     else:
-        output = str(commands.getstatusoutput('frank-avail ' + q)[1]).split("\n")
+        output = str(subprocess.getstatusoutput('frank-avail ' + q)[1]).split("\n")
+
+    #print(output)
 
 
     for line in output[2:]:
         line = str(line)
 
         if Settings['-debug'] == True:
-            print line
+            print(line)
 
         Tokens = line.split()
         cores = int(Tokens[0])
@@ -192,9 +195,9 @@ for q in Matches:
         if cores > total_cores and t_requested <= t_avail:
 
             if Settings['-verbose'] == True:
-                print "  requested ", total_cores, " core(s)"
-                print "  requested ", Settings['-walltime'], " walltime"
-                print "  available: ", cores, " cores @ ", wall, " walltime. Estimated wait time: ", wait
+                print("  requested ", total_cores, " core(s)")
+                print("  requested ", Settings['-walltime'], " walltime")
+                print("  available: ", cores, " cores @ ", wall, " walltime. Estimated wait time: ", wait)
 
 
             if t_wait <= wait_time_sec:
@@ -207,5 +210,5 @@ for q in Matches:
             break
 
 if Settings['-verbose'] == True:
-    print "\nBest queue:"
-print best_q, "  Estimated wait time: ", wait_time
+    print("\nBest queue:")
+print(best_q, "  Estimated wait time: ", wait_time)

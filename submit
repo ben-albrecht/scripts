@@ -13,10 +13,14 @@ TODO:
     - Allocate max ppn for queue selected
     - Improve optimal queue selection
 """
+# Python3 compatibility ( must come first! )
+from __future__ import print_function
 
-import os, sys, grp, pwd, getpass, commands
+# Standard library imports
+import os, sys, grp, pwd, getpass, subprocess
 from subprocess import call
 from uuid import uuid4
+
 
 
 try:
@@ -85,26 +89,26 @@ def choosequeue (opts):
 
         settings = ""
 
-        status = commands.getstatusoutput('best_queue ' + settings)
+        status = subprocess.getstatusoutput('best_queue ' + settings)
         if "sh:" in status[1]:
-            print "Error running best_queue script:"
-            print status
+            print("Error running best_queue script:")
+            print(status)
             sys.exit(1)
 
-        output = str(status[1]).split("\n")
+        output = str(status[1]).split()
 
 
-        queue = output[0].split()[0]
-        wait = output[0].split()[4]
-        print output
+        print(output)
+        queue = output[0]
+        wait = output[4]
 
         # Signal that we're 'investors' on Frank
         if opts.investor == True:
             if not queue == "test":
                 queue = "i" + queue
 
-        print "Best submission queue: ", queue
-        print "Estimated wait time: ", wait
+        print("Best submission queue: ", queue)
+        print("Estimated wait time: ", wait)
 
         return queue
 
@@ -181,7 +185,7 @@ def main():
     # Create job name
     job_name = opts.job.replace(".in", "")
     job_name = job_name.replace(".n", "")
-    print "job name = ", job_name
+    print("job name = ", job_name)
 
     # Choose optimal queue
     opts.queue = choosequeue(opts)
