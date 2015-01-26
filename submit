@@ -16,17 +16,18 @@ TODO:
 # Python3 compatibility ( must come first! )
 from __future__ import print_function
 
+# Quit if incompatible version of Python
+import sys
+if sys.version_info < (2,7):
+    print("Sorry, submit requires Python 2.7+")
+    print("If you're on Frank, try:")
+    print("module load python/2.7.6-gcc48")
+    sys.exit(1)
+
 # Standard library imports
-import os, sys, grp, pwd, getpass, subprocess
-from subprocess import call
+import os, grp, pwd, getpass, argparse
+import subprocess
 from uuid import uuid4
-
-
-
-try:
-        import argparse
-except ImportError:
-        raise ImportError('Unable to import argparse, make sure you are using Python 2.7+')
 
 
 def get_arguments(args=None):
@@ -70,7 +71,7 @@ def get_arguments(args=None):
     parser.add_argument('--nodes',    type=int,  default=1, help='number of nodes')
     parser.add_argument('--queue',    type=str,  default='auto', help='queue to submit to')
     parser.add_argument('--walltime', type=str,  default='1:00:00', help='walltime in HH:MM:SS format')
-    parser.add_argument('--qos',      type=str,  default='low', help='priority')
+    parser.add_argument('--qos',      type=str,  default='investor', help='priority', choices=['low','investor'])
     parser.add_argument('--account',  type=str,  default=def_account, help='account with Gold on Frank' )
     parser.add_argument('--path',     type=str,  default=def_path, help='path to program')
     parser.add_argument('--save',     type=bool, default=False, help='Save PBS file when True')
@@ -89,18 +90,18 @@ def choosequeue (opts):
 
         settings = ""
 
-        status = subprocess.getstatusoutput('best_queue ' + settings)
+        bashCommand = ('best_queue' + settings)
+        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        status = process.communicate()[0]
+        output = str(status).split()
+        queue = output[0]
+        wait = output[4]
+
         if "sh:" in status[1]:
             print("Error running best_queue script:")
             print(status)
             sys.exit(1)
 
-        output = str(status[1]).split()
-
-
-        print(output)
-        queue = output[0]
-        wait = output[4]
 
         # Signal that we're 'investors' on Frank
         if opts.investor == True:
@@ -195,7 +196,7 @@ def main():
 
     #qsub ${RUN}
     if opts.dry == False:
-        call(["qsub", RUN])
+        subprocess.call(["qsub", RUN])
 
 
 if __name__ == '__main__':
