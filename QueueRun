@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+
+def get_inputfiles(queuedir = os.path.expanduser("~")+'/chemistry/queue'):
+    """
+    Get inputfiles without outputfiles and return list of them
+    """
+
+    inputfiles = []
+
+    if not os.path.exists(queuedir):
+        print(queuedir, "does not exist")
+        exit(1)
+    if not os.path.isdir(queuedir):
+        print(queuedir, "is not a directory")
+        exit(1)
+
+    walk = list(os.walk(queuedir))
+    for dir in walk:
+        for inputfilename in dir[2]:
+            if '.in' in inputfilename:
+                # Check if output exists for this file
+                outputfilename  = os.path.splitext(inputfilename)[0]+'.out'
+                if outputfilename in dir[2]:
+                    #outputfile = dir[0] + '/' + outputfilename
+                    next
+                else:
+                    inputfile = dir[0] + '/' + inputfilename
+                    outputfile = dir[0] + '/' + outputfilename
+                    inputfiles.append(inputfile)
+
+    return inputfiles
+
+
+def qchem(inputfile, outputfile = None):
+    """
+    Q-Chem Wrapper
+    """
+    if outputfile == None:
+        outputfile = os.path.splitext(inputfile)[0]+'.out'
+
+    bashCommand = "qchem " + inputfile + " " +  outputfile
+    print(bashCommand)
+    process = subprocess.Popen(bashCommand.split())
+    process.wait()
+    #output = process.communicate()[0]
+
+
+
+def main():
+    """
+        1. Check ~/chemistry/queue for jobs to run (if job has *.in, but no *.out)
+        2. Run job if found, defaults to `qchem a.in a.out`
+        3. Once finished, leave program, with option to delete a.in/a.out (if sym links)
+    """
+
+    inputfiles = get_inputfiles()
+
+    for inputfile in inputfiles:
+        qchem(inputfile)
+
+    return
+
+
+
+
+if __name__ == '__main__':
+    main()

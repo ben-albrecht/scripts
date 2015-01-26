@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# QueueStart
+# Wrapper function for RunQueue to check if RunQueue is already running
+
+QueueRun=`ps aux | grep "python3" | grep "QueueRun" | wc -l`
+
+if [ $QueueRun -gt 0 ]; then
+    exit 0
+else
+    python3 $HOME/repos/scripts/QueueRun &
+fi
