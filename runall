@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+import os
+
+
+def runall(rundir = os.path.expanduser("~")+'/chemistry/run', compchemsoftware = 'qchem'):
+    """
+    Find every un-run job in rundir and run them all
+    """
+
+    # Check if data exists and is a directory
+    if not os.path.exists(rundir):
+        print(rundir, "does not exist")
+        exit(1)
+    if not os.path.isdir(rundir):
+        print(rundir, "is not a directory")
+        exit(1)
+
+    # Make a list of all inputs & outputs in rundir, searching recursively
+    walk = list(os.walk(rundir))
+    for dir in walk:
+        for filename in dir[2]:
+            # Find inputfiles
+            if '.in' in filename:
+                # Check if output exists for corresponding inputfile
+                outputfilename  = os.path.splitext(filename)[0]+'.out'
+                if not outputfilename in dir[2]:
+                    inputfile = dir[0] + '/' + filename
+                    outputfile = dir[0] + '/' + outputfilename
+                    print(compchemsoftware, inputfile, outputfile)
+
+
+
+def main(opts=None):
+    if opts == None:
+        runall()
+    else:
+        runall(opts.rundir, opts.compchemsoftware)
+
+
+if __name__ == '__main__':
+    exit(main())

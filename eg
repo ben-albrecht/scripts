@@ -1,9 +1,8 @@
-#!/bin/bash -x
+#!/bin/bash
 
 source ~/repos/scripts/lib/bash/colors.sh
 source ~/repos/scripts/lib/bash/conditions.sh
 
-Query=$1
 Eg="$HOME/repos/eg"
 
 if IsEmptyString $Query; then
@@ -37,3 +36,5 @@ if ! IsEmpty $Grep; then
     echo -e "${Purple}-----------------------------------------------------------------------------------------------------------${NC}"
     return
 fi
+
+
