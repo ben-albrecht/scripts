@@ -1,27 +1,19 @@
 #!/bin/bash -x
 
-# Quick Reference bash script
-# Searches $HOME/repos/ref recursively for argument
-#   if argument is file, opens file in vim
-#   if argument is directory, changes to that directory
-#   if argument is a string in file, opens that file
-
-# libs
 source ~/repos/scripts/lib/bash/colors.sh
 source ~/repos/scripts/lib/bash/conditions.sh
 
 Query=$1
-Ref="$HOME/repos/ref"
+Eg="$HOME/repos/eg"
 
-# Go to ref if no query given
 if IsEmptyString $Query; then
-    cd $Ref
+    cd $Eg
     ls
     return
 fi
 
-# Go to directory in ref named $Query
-Dir=`find $Ref -name "$Query"  2> /dev/null`
+# Go to directory in eg named $Query
+Dir=`find $Eg -name "$Query"  2> /dev/null`
 if ! IsEmptyString $Dir; then
     if IsDirectory $Dir; then
         echo "$Dir is a directory"
@@ -31,26 +23,17 @@ if ! IsEmptyString $Dir; then
     fi
 fi
 
-# Open file in ref named $Query
-File=`find $Ref -name "${Query}.md" 2> /dev/null`
-if ! IsEmptyString $File; then
-    vi $File
-    return
-fi
-
-# Open file in ref containing string $Query
-Grep=`grep -Hsr $Query $Ref/*`
+ Open file in eg containing string $Query
+Grep=`grep -Hsr $Query $Eg/*`
 if ! IsEmpty $Grep; then
     clear
     echo "Lines Found In Files:"
     echo -e "${Purple}---------------------------${NC}"
-    echo -e "${Red}`grep -hslr $Query $Ref/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
+    echo -e "${Red}`grep -hslr $Query $Eg/* | awk 'BEGIN{FS="/"} {print $(NF)}'`${NC}"
     echo -e "${Purple}---------------------------${NC}"
     echo ""
     echo -e "${Purple}-----------------------------------------------------------------------------------------------------------${NC}"
-    grep -hsr --color=auto $Query $Ref/*
+    grep -hsr --color=auto $Query $Eg/*
     echo -e "${Purple}-----------------------------------------------------------------------------------------------------------${NC}"
     return
 fi
-
-
