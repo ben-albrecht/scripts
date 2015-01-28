@@ -10,19 +10,26 @@ Authors: Daniel   Lambrecht (original)
 New version requires Python 2.7+ (for argparse)
 
 TODO:
-    - Allocate max ppn for queue selected
     - Improve optimal queue selection
+    - Check Limits per queue
+    - Read defaults from ~/.submitrc file
+
 """
+# Python3 compatibility ( must come first! )
+from __future__ import print_function
 
-import os, sys, grp, pwd, getpass, commands
-from subprocess import call
+# Quit if incompatible version of Python
+import sys
+if sys.version_info < (2,7):
+    print("Sorry, submit requires Python 2.7+")
+    print("If you're on Frank, try:")
+    print("module load python/2.7.6-gcc48")
+    sys.exit(1)
+
+# Standard library imports
+import os, grp, pwd, getpass, argparse
+import subprocess
 from uuid import uuid4
-
-
-try:
-        import argparse
-except ImportError:
-        raise ImportError('Unable to import argparse, make sure you are using Python 2.7+')
 
 
 def get_arguments(args=None):
@@ -61,17 +68,18 @@ def get_arguments(args=None):
 
 
     parser.add_argument('job', help='Input File')
-    parser.add_argument('--program',    type=str,  default='qchem', help='program to run on input file')
+    parser.add_argument('--program',  type=str,  default='qchem', help='program to run on input file')
     parser.add_argument('--ppn',      type=int,  default=1, help='number of processors')
     parser.add_argument('--nodes',    type=int,  default=1, help='number of nodes')
     parser.add_argument('--queue',    type=str,  default='auto', help='queue to submit to')
     parser.add_argument('--walltime', type=str,  default='1:00:00', help='walltime in HH:MM:SS format')
-    parser.add_argument('--qos',      type=str,  default='low', help='priority')
+    parser.add_argument('--qos',      type=str,  default='investor', help='priority', choices=['low','investor'])
     parser.add_argument('--account',  type=str,  default=def_account, help='account with Gold on Frank' )
     parser.add_argument('--path',     type=str,  default=def_path, help='path to program')
     parser.add_argument('--save',     type=bool, default=False, help='Save PBS file when True')
     parser.add_argument('--dry',      type=bool, default=False, help='Do not run qsub on PBS file when True')
     parser.add_argument('--investor', type=bool, default=True, help='Add prefix "i" to queue name if you are an investor group')
+    parser.add_argument('--email',    type=str,  default='bja39@pitt.edu', help='Email address for job start/finish notifications, set to "off" to turn off')
 
     opts = parser.parse_args(args)
 
@@ -85,26 +93,26 @@ def choosequeue (opts):
 
         settings = ""
 
-        status = commands.getstatusoutput('best_queue ' + settings)
+        bashCommand = ('best_queue' + settings)
+        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        status = process.communicate()[0]
+        output = str(status).split()
+        queue = output[0]
+        wait = output[4]
+
         if "sh:" in status[1]:
-            print "Error running best_queue script:"
-            print status
+            print("Error running best_queue script:")
+            print(status)
             sys.exit(1)
 
-        output = str(status[1]).split("\n")
-
-
-        queue = output[0].split()[0]
-        wait = output[0].split()[4]
-        print output
 
         # Signal that we're 'investors' on Frank
         if opts.investor == True:
             if not queue == "test":
                 queue = "i" + queue
 
-        print "Best submission queue: ", queue
-        print "Estimated wait time: ", wait
+        print("Best submission queue: ", queue)
+        print("Estimated wait time: ", wait)
 
         return queue
 
@@ -119,8 +127,8 @@ def writepbs(opts, job_name):
 
     # Create unique ID for job
     JOB_ID = uuid4().hex # a unique id for the current job
-    RUN = ".run.sh_" + JOB_ID
-    #print "run script = ", RUN
+    RUN = ".job_name." + JOB_ID + ".pbs"
+    print("run script = ", RUN)
 
     file = open(RUN, "w")
 
@@ -131,19 +139,46 @@ def writepbs(opts, job_name):
     file.write("#PBS -l walltime=" + opts.walltime + "\n")
     file.write("#PBS -q " + opts.queue + "\n")
     file.write("#PBS -l qos=" + opts.qos + "\n")
-    file.write("#PBS -A " + opts.account + "\n")
+    file.write("#PBS -j oe\n")
+    #file.write("#PBS -A " + opts.account + "\n")
+
+    if not opts.email == "off":
+        file.write("#PBS -m abe\n")
+        file.write("#PBS -M " + opts.email + "\n")
     file.write("\n")
+
     file.write("JOBNAME=" + job_name + "\n")
     file.write("NODES=" + str(opts.nodes) + "\n")
     file.write("PPN=" + str(opts.ppn) + "\n")
     file.write("\n")
+
+    # TODO: if module given or avail -> else load the qcrc
+    module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
+    file.write("# Load Q-Chem Moduels\n")
+    file.write("module purge\n")
+    file.write("module load intel/2013.0\n")
+    file.write("module load " + module + "\n")
+    file.write("\n")
+
+    #file.write("# Load Q-Chem environment variables ...\n")
+    #file.write(". " + opts.path + "/qcrc\n")
+    #file.write("\n")
+
     file.write("cd ${PBS_O_WORKDIR}\n")
-    #file.write("cp ${PBS_O_WORKDIR}/${JOBNAME}.in ${LOCAL}\n")
-    #file.write("cd ${LOCAL}\n")
+    file.write("cp ${PBS_O_WORKDIR}/${JOBNAME}.in ${LOCAL}\n")
+    file.write("cd ${LOCAL}\n")
     file.write("\n")
-    file.write("# Load Q-Chem environment variables ...\n")
-    file.write(". " + opts.path + "/qcrc\n")
+
+    file.write("run_on_exit() {\n")
+    file.write("    set -v\n")
+    file.write("    rm $LOCAL/pathtable\n")
+    file.write("    cp -v -R $LOCAL/* $PBS_O_WORKDIR\n")
+    file.write("}\n")
     file.write("\n")
+
+    file.write("trap run_on_exit EXIT\n")
+    file.write("\n")
+
 
     parallel_string = ""
     if int(opts.nodes) > 1:
@@ -159,7 +194,7 @@ def writepbs(opts, job_name):
     #file.write("touch ${JOBNAME}.out\n")
     #file.write("ln ${JOBNAME}.out ${PBS_O_WORKDIR}/${JOBNAME}.out\n")
     file.write("\n")
-    file.write("qchem " + parallel_string + save_string + " ${JOBNAME}.in ${PBS_O_WORKDIR}/${JOBNAME}.out ${JOBNAME}." + JOB_ID + "\n")
+    file.write("`which qchem` " + parallel_string + save_string + " ${JOBNAME}.in ${PBS_O_WORKDIR}/${JOBNAME}.out ${JOBNAME}." + JOB_ID + "\n")
     file.write("\n")
 
     if opts.save == True:
@@ -173,7 +208,6 @@ def writepbs(opts, job_name):
 
 
 def main():
-    # TODO: Pick best queue for job type and available resources
 
     # Get arguments using argparse
     opts = get_arguments()
@@ -181,7 +215,7 @@ def main():
     # Create job name
     job_name = opts.job.replace(".in", "")
     job_name = job_name.replace(".n", "")
-    print "job name = ", job_name
+    print("job name = ", job_name)
 
     # Choose optimal queue
     opts.queue = choosequeue(opts)
@@ -191,7 +225,7 @@ def main():
 
     #qsub ${RUN}
     if opts.dry == False:
-        call(["qsub", RUN])
+        subprocess.call(["qsub", RUN])
 
 
 if __name__ == '__main__':
