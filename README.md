@@ -1,11 +1,9 @@
-Various python / shell scripts created for work.
+# Various python / shell scripts created for my work.
 
-TODO:
-#####
-# qhist
-#   Recent q-chem jobs run/accessed
-# Construct qcl software suite and give it its own repo
-# qread
-#   Extract data from output and put it in quick easy-to-read table/plot
-#   via matplotlib
+I would like to convert as many of these scripts to python as possible.
 
+## TODO
+* Convert many utilities to broad-scope qcl package
+* Do away with lib/python -> qcl
+* scripts/lib/bash -> scripts
+** scripts can act as a lib path as well (e.g. PYTHONPATH)
