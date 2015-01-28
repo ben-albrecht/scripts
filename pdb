@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 # Feed this fun script a PDB ID, and get your PDB file unzipped and ready to go
 # All in a blink of the eye!

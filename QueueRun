@@ -17,12 +17,14 @@ def get_inputfiles(queuedir = os.path.expanduser("~")+'/chemistry/queue'):
         print(queuedir, "is not a directory")
         exit(1)
 
-    walk = list(os.walk(queuedir))
+    walk = list(os.walk(queuedir, followlinks = True))
     for dir in walk:
         for inputfilename in dir[2]:
-            if '.in' in inputfilename:
+            stub, ext = os.path.splitext(inputfilename)
+            # Input file identified by ending with .in and not starting with '.' (hidden file)
+            if ext == '.in' and not stub[0] == '.':
                 # Check if output exists for this file
-                outputfilename  = os.path.splitext(inputfilename)[0]+'.out'
+                outputfilename  = stub+'.out'
                 if outputfilename in dir[2]:
                     #outputfile = dir[0] + '/' + outputfilename
                     next

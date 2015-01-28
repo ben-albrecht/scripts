@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Search function for eg
+
 source ~/repos/scripts/lib/bash/colors.sh
 source ~/repos/scripts/lib/bash/conditions.sh
 

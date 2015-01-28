@@ -6,7 +6,14 @@ import os
 
 def runall(rundir = os.path.expanduser("~")+'/chemistry/run', compchemsoftware = 'qchem'):
     """
-    Find every un-run job in rundir and run them all
+    WORK IN PROGRESS
+    Run every job in a given directory
+    Options:
+    -r --recursively: Search recursively
+    -u --unrun-only: Find every un-run job in rundir and run them all
+    --compchemsoftware
+
+    Eventually replace qchemall (shitty shell script)
     """
 
     # Check if data exists and is a directory
