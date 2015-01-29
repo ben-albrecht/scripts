@@ -2,6 +2,7 @@
 
 import argparse
 import subprocess
+import shlex
 import webbrowser as wb
 
 def main(opts):
@@ -34,11 +35,20 @@ def spawn_in_background():
           <close connection?>
 
     """
-    psauxCommand = ("ps -aux | grep -c 'ipython notebook'")
-    process = subprocess.Popen(psauxCommand.split(), stdout=subprocess.PIPE)
-    status = process.communicate()[0]
-    output = str(status).split()
-    ipython_nb_instances = output[0]
+    psauxCommand = ("ps -aux ")
+    grepCommand = ("grep -c 'ipython notebook'")
+    p1 = subprocess.Popen(shlex.split(psauxCommand), stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(shlex.split(grepCommand), stdin=p1.stdout, stdout=subprocess.PIPE)
+    output = p2.communicate()[0]
+
+    #process = subprocess.Popen(grepCommand.split(), stdout=subprocess.PIPE)
+
+    #status = process.communicate()[0]
+    status = str(output.split()[0].decode())
+
+    print(status)
+
+    ipython_nb_instances = int(status)
 
     if ipython_nb_instances <= 1:
         ipythonCommand = ('nohup ipython notebook --no-browser &')
@@ -84,7 +94,7 @@ def get_arguments(args=None):
                                      the Notebook locally through the browser ''',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
-    parser.add_argument('server', default='local', help='Remote Server IP or ssh/config alias')
+    parser.add_argument('-server', default='local', help='Remote Server IP or ssh/config alias')
     opts = parser.parse_args(args)
     return opts
 
