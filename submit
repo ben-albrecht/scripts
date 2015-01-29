@@ -127,14 +127,18 @@ def writepbs(opts, job_name):
 
     # Create unique ID for job
     JOB_ID = uuid4().hex # a unique id for the current job
-    RUN = ".job_name." + JOB_ID + ".pbs"
+    RUN = "." + job_name + "." + JOB_ID + ".pbs"
+    #job_dir = os.path.dirname(os.path.realpath('job_name'+'.in')).split('/')[-1]
+    job_dir = os.path.basename(os.path.dirname(os.path.realpath(job_name+'.in')))
+
     print("run script = ", RUN)
 
     file = open(RUN, "w")
 
     file.write("#!/bin/bash\n")
     file.write("\n")
-    file.write("#PBS -N " + job_name + "\n")
+    # TODO: A lot of assumptions going on here, maybe add some args for this (dirname), and refactor
+    file.write("#PBS -N " + job_dir + "/" + job_name + "\n")
     file.write("#PBS -l nodes=" + str(opts.nodes) + ":ppn=" + str(opts.ppn) + "\n")
     file.write("#PBS -l walltime=" + opts.walltime + "\n")
     file.write("#PBS -q " + opts.queue + "\n")
@@ -154,7 +158,8 @@ def writepbs(opts, job_name):
 
     # TODO: if module given or avail -> else load the qcrc
     module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
-    file.write("# Load Q-Chem Moduels\n")
+
+    file.write("# Load Q-Chem Modules\n")
     file.write("module purge\n")
     file.write("module load intel/2013.0\n")
     file.write("module load " + module + "\n")
