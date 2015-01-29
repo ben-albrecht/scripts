@@ -34,13 +34,13 @@ def spawn_in_background():
           <close connection?>
 
     """
-    psauxCommand = ('ps aux | grep ipython notebook')
+    psauxCommand = ("ps -aux | grep -c 'ipython notebook'")
     process = subprocess.Popen(psauxCommand.split(), stdout=subprocess.PIPE)
     status = process.communicate()[0]
     output = str(status).split()
-    ipython_nb_instances = 1
+    ipython_nb_instances = output[0]
 
-    if ipython_nb_instances == 0:
+    if ipython_nb_instances <= 1:
         ipythonCommand = ('nohup ipython notebook --no-browser &')
         process = subprocess.Popen(psauxCommand.split(), stdout=subprocess.PIPE)
         status = process.communicate()[0]
@@ -48,7 +48,7 @@ def spawn_in_background():
     # How the fuck do I close the connection??
 
 
-def from_local(server):
+def spawn_remotely(server):
     """
     Remote call:
       Give remote ssh alias as only arg
