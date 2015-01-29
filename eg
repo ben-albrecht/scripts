@@ -5,6 +5,7 @@
 source ~/repos/scripts/lib/bash/colors.sh
 source ~/repos/scripts/lib/bash/conditions.sh
 
+Query=$1
 Eg="$HOME/repos/eg"
 
 if IsEmptyString $Query; then
