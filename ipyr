@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+# ipyr
+#   IPy(thon notebook) R(emote)
+
+# Spawn IPython Notebooks remotely, and then set up port forward
+#   to access them locally via localhost:6001
+
+# Local call:
+#   Give remote ssh alias as only arg
+
+#       ipyr von
+
+#       ssh von 'ipyremote'
+#       ssh -N -f -L localhost:6001:localhost:8888 von
+#       <open browser to localhost:6001>
+
+
+# Remote call:
+#   No argument
+
+#       ipyr
+
+#       <Check if ipython notebook already running via `ps aux | grep ipython notebook`>
+#       nohup ipython notebook --no-browser &
+#       <close connection?>
+
