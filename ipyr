@@ -31,10 +31,10 @@ def main(opts):
 
     """
     if opts.server == 'local':
-        spawn_in_background()
-
+        status = spawn_in_background()
     else:
-        spawn_remotely(opts.server)
+        status = spawn_remotely(opts.server)
+    print(status)
 
 
 def spawn_in_background():
@@ -55,21 +55,16 @@ def spawn_in_background():
     p2 = subprocess.Popen(shlex.split(grepCommand), stdin=p1.stdout, stdout=subprocess.PIPE)
     output = p2.communicate()[0]
 
-    #process = subprocess.Popen(grepCommand.split(), stdout=subprocess.PIPE)
-
-    #status = process.communicate()[0]
     status = str(output.split()[0].decode())
-
-    print(status)
 
     ipython_nb_instances = int(status)
 
     if ipython_nb_instances <= 1:
-        ipythonCommand = ('nohup ipython notebook --no-browser &')
-        process = subprocess.Popen(psauxCommand.split(), stdout=subprocess.PIPE)
-        status = process.communicate()[0]
-
-    # How the fuck do I close the connection??
+        ipythonCommand = ('ipython notebook --no-browser')
+        subprocess.Popen(shlex.split(ipythonCommand))
+        return 0
+    else:
+        return 1
 
 
 def spawn_remotely(server):
@@ -87,19 +82,15 @@ def spawn_remotely(server):
 
     """
 
-    sshCommand = ("ssh " + server + " 'ipyr'")
-    process = subprocess.Popen(sshCommand.split(), stdout=subprocess.PIPE)
-    status = process.communicate()[0]
-    # output = str(status).split()
-    # ipython_nb_instances = 1
+    sshCommand = ("ssh " + server + " 'ipyr local'")
+    subprocess.Popen(shlex.split(sshCommand))
 
     sshtunnelCommand = ("ssh -N -f -L localhost:6001:localhost:8888" + server)
-    process = subprocess.Popen(sshCommand.split(), stdout=subprocess.PIPE)
-    status = process.communicate()[0]
+    subprocess.Popen(shlex.split(sshCommand))
 
     wb.open('http://localhost:6001')
 
-
+    return 0
 
 
 if __name__ == '__main__':
