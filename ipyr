@@ -85,8 +85,9 @@ def spawn_remotely(server):
     sshCommand = ("ssh " + server + " 'ipyr local'")
     subprocess.Popen(shlex.split(sshCommand))
 
-    sshtunnelCommand = ("ssh -N -f -L localhost:6001:localhost:8888" + server)
-    subprocess.Popen(shlex.split(sshCommand))
+    sshtunnelCommand = ("ssh -N -f -L localhost:6001:localhost:8888 " + server)
+
+    subprocess.Popen(shlex.split(sshtunnelCommand))
 
     wb.open('http://localhost:6001')
 
