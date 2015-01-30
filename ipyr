@@ -5,6 +5,20 @@ import subprocess
 import shlex
 import webbrowser as wb
 
+
+def get_arguments(args=None):
+    parser = argparse.ArgumentParser(prog = 'ipyr',
+                                     usage = '%(prog)s remotemachine [options] ',
+                                     description = ''' %(prog)s, or IPython Remote is a simplified wrapper
+                                     script for spawning an IPython Notebook on a remote server, and accessing
+                                     the Notebook locally through the browser ''',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
+                                     )
+    parser.add_argument('server', type=str,  help='Remote Server IP or ssh/config alias to host IPy NB. "local" for this server')
+    opts = parser.parse_args(args)
+    return opts
+
+
 def main(opts):
     """
     ipyr
@@ -85,18 +99,6 @@ def spawn_remotely(server):
 
     wb.open('http://localhost:6001')
 
-
-def get_arguments(args=None):
-    parser = argparse.ArgumentParser(prog = 'ipyr',
-                                     usage = '%(prog)s remotemachine [options] ',
-                                     description = ''' %(prog)s, or IPython Remote is a simplified wrapper
-                                     script for spawning an IPython Notebook on a remote server, and accessing
-                                     the Notebook locally through the browser ''',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
-                                     )
-    parser.add_argument('-server', default='local', help='Remote Server IP or ssh/config alias')
-    opts = parser.parse_args(args)
-    return opts
 
 
 
