@@ -57,21 +57,26 @@ def get_arguments(args=None):
         latest_subdir = max(all_subdirs, key=os.path.getmtime)
         def_path = latest_subdir # default version
 
-    # Argparse stuff
+    # Argparse parsing
     parser = argparse.ArgumentParser(prog='submit',
                                      usage= "%(prog)s job [options] ",
                                      description = ''' %(prog)s is a script that auto-generates a pbs
                                      file and submits a job, utilizing another script, best_queue, which determines
-                                     the best queue to submit for minimizing wait times ''',
+                                     the best queue to submit for minimizing wait times 
+
+                                     A integer type argument''',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                     )
 
 
-    parser.add_argument('job', help='Input File')
+    parser.add_argument('job',        type=str, nargs='+', help='Input File')
+
     parser.add_argument('--program',  type=str,  default='qchem', help='program to run on input file')
     parser.add_argument('--ppn',      type=int,  default=1, help='number of processors')
     parser.add_argument('--nodes',    type=int,  default=1, help='number of nodes')
-    parser.add_argument('--queue',    type=str,  default='auto', help='queue to submit to')
+    parser.add_argument('--mem',      type=int,  default=-1, help='gb of memory')
+    parser.add_argument('--disk',     type=int,  default=-1, help='gb of scratch disk space')
+    parser.add_argument('--queue',    type=str,  default='auto', help='queue to submit to, auto for best, aggressive for all')
     parser.add_argument('--walltime', type=str,  default='1:00:00', help='walltime in HH:MM:SS format')
     parser.add_argument('--qos',      type=str,  default='investor', help='priority', choices=['low','investor'])
     parser.add_argument('--account',  type=str,  default=def_account, help='account with Gold on Frank' )
@@ -141,6 +146,10 @@ def writepbs(opts, job_name):
     file.write("#PBS -N " + job_dir + "/" + job_name + "\n")
     file.write("#PBS -l nodes=" + str(opts.nodes) + ":ppn=" + str(opts.ppn) + "\n")
     file.write("#PBS -l walltime=" + opts.walltime + "\n")
+    if opts.mem > 0:
+        file.write("#PBS -l mem=" + str(opts.mem) + "gb\n")
+    if opts.disk > 0:
+        file.write("#PBS -l ddisk=" + str(opts.disk) + "gb\n")
     file.write("#PBS -q " + opts.queue + "\n")
     file.write("#PBS -l qos=" + opts.qos + "\n")
     file.write("#PBS -j oe\n")
@@ -212,25 +221,46 @@ def writepbs(opts, job_name):
     return RUN
 
 
+
+def submit(RUN):
+    """ Wrapper function for qsub / Writes QUID file if aggressively submitting
+
+    :RUN: pbs file to run
+    """
+
+    bashCommand = ('qsub '+ RUN)
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    status = process.communicate()[0]
+    #output = str(status).split()
+    #QUID = output[0].split('.')[0]
+
+    #stub, ext = os.path.splitext(RUN)
+    #quidfile = stub+'.quid'
+    #with open(quidfile, 'w') as handle:
+    #    handle.write(QUID)
+
+
+
 def main():
 
     # Get arguments using argparse
     opts = get_arguments()
 
     # Create job name
-    job_name = opts.job.replace(".in", "")
-    job_name = job_name.replace(".n", "")
-    print("job name = ", job_name)
+    for job in opts.job:
+        print(job)
+        job_name = job.replace(".in", "")
+        job_name = job_name.replace(".n", "")
+        print("job name = ", job_name)
 
-    # Choose optimal queue
-    opts.queue = choosequeue(opts)
+        # Choose optimal queue
+        opts.queue = choosequeue(opts)
 
-    # Write batch script file
-    RUN = writepbs(opts, job_name)
+        # Write batch script file
+        RUN = writepbs(opts, job_name)
 
-    #qsub ${RUN}
-    if opts.dry == False:
-        subprocess.call(["qsub", RUN])
+        if opts.dry == False:
+            submit(RUN)
 
 
 if __name__ == '__main__':

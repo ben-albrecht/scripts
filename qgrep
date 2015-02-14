@@ -50,6 +50,14 @@ fi
 scf=`grep -H "Convergence criterion met" $target | awk '{print $1}' | head -1`
 ccsdt=`grep -H "CCSD total energy" $target | awk '{print $1}' | head -1`
 mp2=`grep -H "MP2         total energy" $target | awk '{print $1}' | head -1`
+thankyou=`grep -c "Thank you very much for using Q-Chem.  Have a nice day." $target`
+
+if [ $thankyou -gt 0 ]; then
+    echo "Job Completed"
+else
+    echo "Job Incomplete"
+    exit 1
+fi
 
 if [ ! -z $scf ]; then
     echo "SCF Energies:"
