@@ -60,7 +60,7 @@ def spawn_in_background():
     ipython_nb_instances = int(status)
 
     if ipython_nb_instances <= 1:
-        ipythonCommand = ('ipython notebook --no-browser')
+        ipythonCommand = ('ipython3 notebook --no-browser')
         subprocess.Popen(shlex.split(ipythonCommand))
         return 0
     else:

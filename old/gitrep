@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Awesome bash script I wrote to update all my git repos with git up (a git alias)
+# and then report back any issues with colorized text
+
+# Note: \e vs. \x1B is OS-dependent UHGGHGHGH - handled via colors.sh
+
+source ~/repos/scripts/lib/bash/colors.sh
+source ~/repos/scripts/lib/bash/conditions.sh
+
+cd $HOME/repos
+
+for repo in `find . -mindepth 1 -maxdepth 1 -type d`
+do
+    # Check that directory is a git repository
+    if IsDirectory $repo/.git ; then
+        echo -e "${Purple} ${repo} ${NC}"
+        (cd "${repo}" && git checkout -q master && git up -q && git status -s)
+    fi
+done
+
+# .dotfiles
+repo=$HOME/.dotfiles
+echo -e "${Purple} ~/.dotfiles ${NC}"
+(cd "${repo}" && git checkout -q master && git up -q && git status -s)
