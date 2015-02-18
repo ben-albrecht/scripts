@@ -6,8 +6,21 @@ from __future__ import print_function
 import os
 import subprocess
 import shlex
-from colorama import Fore
 import argparse
+try:
+    from colorama import Fore
+except ImportError:
+    print("Error loading colorama - colors off")
+    class FakeColors(object):
+        def __init__(self):
+            self.WHITE=""
+            self.GREEN=""
+            self.RED=""
+            self.BLUE=""
+            self.CYAN=""
+            self.YELLOW=""
+    Fore = FakeColors()
+
 
 
 def getargs(args=None):
@@ -21,11 +34,10 @@ def getargs(args=None):
 def gitup(repo, opts=None):
     """ Check that repository has a .git and then call `git up` on it """
 
-    try:
-        ls_repo = os.listdir(repo)
-    except Warning:
+    if os.path.isfile(repo):
         print(repo, Fore.WHITE+"  is not a directory - It should not be in ~/repos")
     else:
+        ls_repo = os.listdir(repo)
         if '.git' in ls_repo:
 
             statuskeys = {
@@ -56,8 +68,6 @@ def gitup(repo, opts=None):
             if updated:
                 print(Fore.BLUE+'  Updated', end='')
             print('')
-
-
 
             #print(output.decode('utf-8'))
 
