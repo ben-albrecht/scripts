@@ -21,6 +21,15 @@ except ImportError:
             self.YELLOW=""
     Fore = FakeColors()
 
+statuskeys = {
+    ' M ': Fore.GREEN +'  Unstaged Modifications',
+    ' A ': Fore.RED   +'  Files Added',
+    ' D ': Fore.RED   +'  Files Deleted',
+    ' R ': Fore.RED   +'  Files Renamed',
+    ' C ': Fore.RED   +'  Files Copied',
+    ' U ': Fore.WHITE +'  Updated, but Unmerged',
+    '?? ': Fore.YELLOW+'  Untracked Files',
+    }
 
 
 def getargs(args=None):
@@ -39,17 +48,6 @@ def gitup(repo, opts=None):
     else:
         ls_repo = os.listdir(repo)
         if '.git' in ls_repo:
-
-            statuskeys = {
-                ' M ': Fore.GREEN +'  Unstaged Modifications',
-                ' A ': Fore.RED   +'  Files Added',
-                ' D ': Fore.RED   +'  Files Deleted',
-                ' R ': Fore.RED   +'  Files Renamed',
-                ' C ': Fore.RED   +'  Files Copied',
-                ' U ': Fore.WHITE +'  Updated, but Unmerged',
-                '?? ': Fore.YELLOW+'  Untracked Files',
-                }
-
             if opts:
                 if not opts.mainopt:
                     gitupdate = "git -C " + repo + " up -q"
@@ -69,11 +67,36 @@ def gitup(repo, opts=None):
                 print(Fore.BLUE+'  Updated', end='')
             print('')
 
-            #print(output.decode('utf-8'))
-
         else:
             print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
             print("  No .git")
+
+
+def remoteup(repo):
+    """Check if local repository is up to date with remote"""
+    gitlocal = "git -C " + repo + " rev-parse @"
+    gitremote = "git -C " + repo + " rev-parse @{u}"
+    gitbase = "git -C " + repo + " rev-parse @ @{u}"
+
+    processlocal = subprocess.Popen(shlex.split(gitlocal), stdout=subprocess.PIPE)
+    processremote = subprocess.Popen(shlex.split(gitremote), stdout=subprocess.PIPE)
+    processbase = subprocess.Popen(shlex.split(gitbase), stdout=subprocess.PIPE)
+
+    localoutput = processlocal.communicate()[0].decode('utf-8')
+    remoteoutput = processremote.communicate()[0].decode('utf-8')
+    baseoutput = processbase.communicate()[0].decode('utf-8')
+
+    if localoutput == remoteoutput:
+        pass
+    elif localoutput == baseoutput:
+        print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+        print(" Need to pull")
+    elif remoteoutput == baseoutput:
+        print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+        print(" Need to push")
+    else:
+        print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+        print(" Diverged")
 
 
 def main(opts):
@@ -85,8 +108,11 @@ def main(opts):
 
     for repo in repos:
         gitup(repo)
+        remoteup(repo)
 
     gitup(dotfiles)
+
+    remoteup(dotfiles)
 
 
 if __name__ == "__main__":
