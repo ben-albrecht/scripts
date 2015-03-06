@@ -170,7 +170,11 @@ def main():
         else:
             bashCommand =('frank-avail ' + q)
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            output = str(process.communicate()[0]).split("\\n")
+            if sys.version_info < (3,0):
+                output = str(process.communicate()[0]).split("\n")
+            else:
+                # This works
+                output = str(process.communicate()[0]).split("\\n")
 
 
         for line in output[2:]:
@@ -189,9 +193,6 @@ def main():
             t_requested = time2sec(Settings['-walltime'])
             t_avail = time2sec(wall)
             t_wait = time2sec(wait)
-            #print "t_requested = ", t_requested
-            #print "t_avail = ", t_avail
-            #print "t_wait = ", t_wait
 
             if cores > total_cores and t_requested <= t_avail:
 
@@ -205,8 +206,6 @@ def main():
                     wait_time_sec = t_wait
                     best_q = q
                     wait_time = wait
-                    #print "best = ", q
-                    #print "wait = ", wait_time
 
                 break
 
