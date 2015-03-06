@@ -1,25 +1,120 @@
-#!/bin/bash
+#!/usr/bin/env python3
+""" Pythonized version of gitrep bash script to update repositories """
 
-# Awesome bash script I wrote to update all my git repos with git up (a git alias)
-# and then report back any issues with colorized text
+from __future__ import print_function
 
-# Note: \e vs. \x1B is OS-dependent UHGGHGHGH - handled via colors.sh
+import os
+import subprocess
+import shlex
+import argparse
+try:
+    from colorama import Fore
+except ImportError:
+    print("Error loading colorama - colors off")
+    class FakeColors(object):
+        def __init__(self):
+            self.WHITE=""
+            self.GREEN=""
+            self.RED=""
+            self.BLUE=""
+            self.CYAN=""
+            self.YELLOW=""
+    Fore = FakeColors()
 
-source ~/repos/scripts/lib/bash/colors.sh
-source ~/repos/scripts/lib/bash/conditions.sh
+statuskeys = {
+    ' M ': Fore.GREEN +'  Unstaged Modifications',
+    ' A ': Fore.RED   +'  Files Added',
+    ' D ': Fore.RED   +'  Files Deleted',
+    ' R ': Fore.RED   +'  Files Renamed',
+    ' C ': Fore.RED   +'  Files Copied',
+    ' U ': Fore.WHITE +'  Updated, but Unmerged',
+    '?? ': Fore.YELLOW+'  Untracked Files',
+    }
 
-cd $HOME/repos
 
-for repo in `find . -mindepth 1 -maxdepth 1 -type d`
-do
-    # Check that directory is a git repository
-    if IsDirectory $repo/.git ; then
-        echo -e "${Purple} ${repo} ${NC}"
-        (cd "${repo}" && git checkout -q master && git up -q && git status -s)
-    fi
-done
+def getargs(args=None):
+    parser = argparse.ArgumentParser(prog='gitrep')
+    parser.add_argument('mainopt', nargs='?', default=None)
 
-# .dotfiles
-repo=$HOME/.dotfiles
-echo -e "${Purple} ~/.dotfiles ${NC}"
-(cd "${repo}" && git checkout -q master && git up -q && git status -s)
+    opts = parser.parse_args()
+    return opts
+
+
+def gitup(repo, opts=None):
+    """ Check that repository has a .git and then call `git up` on it """
+
+    if os.path.isfile(repo):
+        print(repo, Fore.WHITE+"  is not a directory - It should not be in ~/repos")
+    else:
+        ls_repo = os.listdir(repo)
+        if '.git' in ls_repo:
+            if opts:
+                if not opts.mainopt:
+                    gitupdate = "git -C " + repo + " up -q"
+                    processupdate = subprocess.Popen(shlex.split(gitupdate), stdout=subprocess.PIPE)
+                    processupdate.communicate()
+
+            gitstatus = "git -C " + repo + " status -s"
+            processstatus = subprocess.Popen(shlex.split(gitstatus), stdout=subprocess.PIPE)
+            output = processstatus.communicate()[0].decode('utf-8')
+
+            print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+            updated = True
+            for key in [x for x in statuskeys if x in output]:
+                print(statuskeys[key], end='')
+                updated = False
+            if updated:
+                print(Fore.BLUE+'  Updated', end='')
+            print('')
+
+        else:
+            print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+            print("  No .git")
+
+
+def remoteup(repo):
+    """Check if local repository is up to date with remote"""
+    gitlocal = "git -C " + repo + " rev-parse @"
+    gitremote = "git -C " + repo + " rev-parse @{u}"
+    gitbase = "git -C " + repo + " rev-parse @ @{u}"
+
+    processlocal = subprocess.Popen(shlex.split(gitlocal), stdout=subprocess.PIPE)
+    processremote = subprocess.Popen(shlex.split(gitremote), stdout=subprocess.PIPE)
+    processbase = subprocess.Popen(shlex.split(gitbase), stdout=subprocess.PIPE)
+
+    localoutput = processlocal.communicate()[0].decode('utf-8')
+    remoteoutput = processremote.communicate()[0].decode('utf-8')
+    baseoutput = processbase.communicate()[0].decode('utf-8')
+
+    if localoutput == remoteoutput:
+        pass
+    elif localoutput == baseoutput:
+        print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+        print(" Need to pull")
+    elif remoteoutput == baseoutput:
+        print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+        print(" Need to push")
+    else:
+        print((Fore.CYAN+repo.split('/')[-1]).rjust(20), end='')
+        print(" Diverged")
+
+
+def main(opts):
+    """ Update all git repositories inside ~/repos and ~/.dotfiles """
+    repos = [os.path.join(os.environ['HOME'], 'repos', x)
+             for x in os.listdir(os.path.join(os.environ['HOME'], 'repos'))]
+
+    dotfiles = os.path.join(os.environ['HOME'], '.dotfiles')
+
+    for repo in repos:
+        gitup(repo)
+        remoteup(repo)
+
+    gitup(dotfiles)
+
+    remoteup(dotfiles)
+
+
+if __name__ == "__main__":
+    opts = getargs()
+    main(opts)
