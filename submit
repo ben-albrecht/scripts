@@ -167,12 +167,14 @@ def writepbs(opts, job):
     file.write("\n")
 
     # TODO: if module given or avail -> else load the qcrc
-    module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
+    #module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
+    qcrc = "/home/dlambrecht/software/qchem42.trunk.20141216.omp.release/qcrc"
 
     file.write("# Load Q-Chem Modules\n")
     file.write("module purge\n")
     file.write("module load intel/2013.0\n")
-    file.write("module load " + module + "\n")
+    #file.write("module load " + module + "\n")
+    file.write("source " + qcrc+"\n")
     file.write("\n")
 
     #file.write("# Load Q-Chem environment variables ...\n")
