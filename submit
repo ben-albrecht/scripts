@@ -125,16 +125,16 @@ def choosequeue (opts):
         return opts.queue
 
 
-def writepbs(opts, job_name):
+def writepbs(opts, job):
     """
     Write submission script
     """
 
+    job_name, __ = os.path.splitext(job)
     # Create unique ID for job
     JOB_ID = uuid4().hex # a unique id for the current job
     RUN = "." + job_name + "." + JOB_ID + ".pbs"
-    #job_dir = os.path.dirname(os.path.realpath('job_name'+'.in')).split('/')[-1]
-    job_dir = os.path.basename(os.path.dirname(os.path.realpath(job_name+'.in')))
+    job_dir = os.path.basename(os.path.dirname(os.path.realpath(job)))
 
     print("run script = ", RUN)
 
@@ -148,6 +148,7 @@ def writepbs(opts, job_name):
     file.write("#PBS -l walltime=" + opts.walltime + "\n")
     if opts.mem > 0:
         file.write("#PBS -l mem=" + str(opts.mem) + "gb\n")
+        file.write("#PBS -l pmem=" + str(opts.mem) + "gb\n")
     if opts.disk > 0:
         file.write("#PBS -l ddisk=" + str(opts.disk) + "gb\n")
     file.write("#PBS -q " + opts.queue + "\n")
@@ -160,7 +161,7 @@ def writepbs(opts, job_name):
         file.write("#PBS -M " + opts.email + "\n")
     file.write("\n")
 
-    file.write("JOBNAME=" + job_name + "\n")
+    #file.write("JOBNAME=" + job_name + "\n")
     file.write("NODES=" + str(opts.nodes) + "\n")
     file.write("PPN=" + str(opts.ppn) + "\n")
     file.write("\n")
@@ -179,7 +180,7 @@ def writepbs(opts, job_name):
     #file.write("\n")
 
     file.write("cd ${PBS_O_WORKDIR}\n")
-    file.write("cp ${PBS_O_WORKDIR}/${JOBNAME}.in ${LOCAL}\n")
+    file.write("cp ${PBS_O_WORKDIR}/"+job+" ${LOCAL}\n")
     file.write("cd ${LOCAL}\n")
     file.write("\n")
 
@@ -205,10 +206,8 @@ def writepbs(opts, job_name):
     if opts.save == True:
         save_string = " -save "
 
-    #file.write("touch ${JOBNAME}.out\n")
-    #file.write("ln ${JOBNAME}.out ${PBS_O_WORKDIR}/${JOBNAME}.out\n")
     file.write("\n")
-    file.write("`which qchem` " + parallel_string + save_string + " ${JOBNAME}.in ${PBS_O_WORKDIR}/${JOBNAME}.out ${JOBNAME}." + JOB_ID + "\n")
+    file.write("`which qchem` " + parallel_string + save_string + " " + job + " ${PBS_O_WORKDIR}/" + job_name + ".out " + job_name + "." + JOB_ID + "\n")
     file.write("\n")
 
     if opts.save == True:
@@ -249,15 +248,14 @@ def main():
     # Create job name
     for job in opts.job:
         print(job)
-        job_name = job.replace(".in", "")
-        job_name = job_name.replace(".n", "")
+        job_name, __ = os.path.splitext(job)
         print("job name = ", job_name)
 
         # Choose optimal queue
         opts.queue = choosequeue(opts)
 
         # Write batch script file
-        RUN = writepbs(opts, job_name)
+        RUN = writepbs(opts, job)
 
         if opts.dry == False:
             submit(RUN)

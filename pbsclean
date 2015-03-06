@@ -1,12 +1,17 @@
 #!/bin/sh
 
-# Clean up all the shit that submitting pbs files creates
+# Clean up all the mess of shit that submitting pbs files creates
 
 # Examples:
 # 2.0.e2567015
 # 2.0.o2567015
 
 for file in `ls -l | awk '{print $NF}' | egrep '(.*\.[e,o][1-3].*)'`; do
+    echo "rm $file"
+    rm $file
+done
+
+for file in `ls -la | awk '{print $NF}' | egrep '(.*.pbs)'`; do
     echo "rm $file"
     rm $file
 done

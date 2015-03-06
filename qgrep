@@ -48,7 +48,7 @@ else
 fi
 
 scf=`grep -H "Convergence criterion met" $target | awk '{print $1}' | head -1`
-ccsdt=`grep -H "CCSD total energy" $target | awk '{print $1}' | head -1`
+ccsdt=`grep -H " total energy" $target | awk '{print $1}' | head -1`
 mp2=`grep -H "MP2         total energy" $target | awk '{print $1}' | head -1`
 thankyou=`grep -c "Thank you very much for using Q-Chem.  Have a nice day." $target`
 
@@ -64,8 +64,8 @@ if [ ! -z $scf ]; then
     grep -H "Convergence criterion met" $target | awk '{print $1, $3}'
 fi
 if [ ! -z $ccsdt ]; then
-    grep -H "CCSD total energy" $target | awk '{print $1, $6}'
-    echo "CCSD Energies:"
+    echo "CC total energy:"
+    grep -H " total energy" $target | awk '{print $1, $6}'
 fi
 if [ ! -z $mp2 ]; then
     echo "MP2 Energies:"
