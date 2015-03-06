@@ -6,6 +6,8 @@ This script submits Q-Chem jobs to the queue
 Authors: Daniel   Lambrecht (original)
          Benjamin Albrecht (rewritten)
 
+If replacing old submit script,
+be sure to replace old best_queue as well!
 
 New version requires Python 2.7+ (for argparse)
 
@@ -20,16 +22,21 @@ from __future__ import print_function
 
 # Quit if incompatible version of Python
 import sys
-if sys.version_info < (2,7):
-    print("Sorry, submit requires Python 2.7+")
-    print("If you're on Frank, try:")
-    print("module load python/2.7.6-gcc48")
-    sys.exit(1)
 
 # Standard library imports
-import os, grp, pwd, getpass, argparse
-import subprocess
-from uuid import uuid4
+try:
+    import os, grp, pwd, getpass
+    import argparse
+    import subprocess
+    import shlex
+    from uuid import uuid4
+except ImportError:
+    if sys.version_info < (2,7):
+        print("Sorry, submit requires Python 2.7+")
+        print("If you're on Frank, try:")
+        print("module load python/2.7.6-gcc48")
+        sys.exit(1)
+
 
 
 def get_arguments(args=None):
@@ -62,7 +69,7 @@ def get_arguments(args=None):
                                      usage= "%(prog)s job [options] ",
                                      description = ''' %(prog)s is a script that auto-generates a pbs
                                      file and submits a job, utilizing another script, best_queue, which determines
-                                     the best queue to submit for minimizing wait times 
+                                     the best queue to submit for minimizing wait times
 
                                      A integer type argument''',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -84,7 +91,7 @@ def get_arguments(args=None):
     parser.add_argument('--save',     type=bool, default=False, help='Save PBS file when True')
     parser.add_argument('--dry',      type=bool, default=False, help='Do not run qsub on PBS file when True')
     parser.add_argument('--investor', type=bool, default=True, help='Add prefix "i" to queue name if you are an investor group')
-    parser.add_argument('--email',    type=str,  default='bja39@pitt.edu', help='Email address for job start/finish notifications, set to "off" to turn off')
+    parser.add_argument('--email',    type=str,  default='off', help='Email address for job start/finish notifications, set to "off" to turn off')
 
     opts = parser.parse_args(args)
 
@@ -99,7 +106,7 @@ def choosequeue (opts):
         settings = ""
 
         bashCommand = ('best_queue' + settings)
-        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        process = subprocess.Popen(shlex.split(bashCommand), stdout=subprocess.PIPE)
         status = process.communicate()[0]
         output = str(status).split()
         queue = output[0]
@@ -120,9 +127,6 @@ def choosequeue (opts):
         print("Estimated wait time: ", wait)
 
         return queue
-
-    else:
-        return opts.queue
 
 
 def writepbs(opts, job):
@@ -166,20 +170,23 @@ def writepbs(opts, job):
     file.write("PPN=" + str(opts.ppn) + "\n")
     file.write("\n")
 
-    # TODO: if module given or avail -> else load the qcrc
-    #module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
-    qcrc = "/home/dlambrecht/software/qchem42.trunk.20141216.omp.release/qcrc"
-
     file.write("# Load Q-Chem Modules\n")
     file.write("module purge\n")
     file.write("module load intel/2013.0\n")
-    #file.write("module load " + module + "\n")
-    file.write("source " + qcrc+"\n")
-    file.write("\n")
 
-    #file.write("# Load Q-Chem environment variables ...\n")
-    #file.write(". " + opts.path + "/qcrc\n")
-    #file.write("\n")
+    module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
+    qcrc = "/home/dlambrecht/software/qchem42.trunk.20141216.omp.release/qcrc"
+    moduleavail = "modulecmd bash avail " + module
+    #moduleavail = "eval $(/opt/sam/Modules/$MODULE_VERSION/bin/modulecmd bash avail " + module + ")"
+    process = subprocess.Popen(shlex.split(moduleavail), stdout=subprocess.PIPE)
+    status = process.communicate()[0]
+
+    print(status)
+    if module in status:
+        file.write("module load " + module + "\n")
+    else:
+        file.write(". " + qcrc+"\n")
+    file.write("\n")
 
     file.write("cd ${PBS_O_WORKDIR}\n")
     file.write("cp ${PBS_O_WORKDIR}/"+job+" ${LOCAL}\n")
@@ -230,7 +237,7 @@ def submit(RUN):
     """
 
     bashCommand = ('qsub '+ RUN)
-    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    process = subprocess.Popen(shlex.split(bashCommand), stdout=subprocess.PIPE)
     status = process.communicate()[0]
     #output = str(status).split()
     #QUID = output[0].split('.')[0]
@@ -254,7 +261,12 @@ def main():
         print("job name = ", job_name)
 
         # Choose optimal queue
-        opts.queue = choosequeue(opts)
+        if opts.queue == "auto":
+            try:
+                opts.queue = choosequeue(opts)
+            except:
+                print("Error selecting optimal queue, selecting shared as default queue")
+                opts.queue = 'shared'
 
         # Write batch script file
         RUN = writepbs(opts, job)
