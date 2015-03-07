@@ -183,7 +183,6 @@ def writepbs(opts, job):
     process = subprocess.Popen(shlex.split(moduleavail), stdout=subprocess.PIPE)
     status = process.communicate()[0]
 
-    print(status)
     if module in status:
         file.write("module load " + module + "\n")
     else:
