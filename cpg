@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 cpg - an extended qchem input system
@@ -7,6 +7,8 @@ Cartesian Product Generator
 
 Will some day be a part of the qcl suite
 """
+
+from __future__ import print_function
 
 import sys
 import os
@@ -87,8 +89,8 @@ if __name__ == '__main__':
     stub, ext  = os.path.splitext(inp)
     subdir = os.path.join(work, stub + '_inp')
     if not os.path.isfile(inp) :
-        print "File", inp, "Not found"
-        print "Try 'cpg --help'"
+        print("File", inp, "Not found")
+        print("Try 'cpg --help'")
         exit(1)
 
     if not os.path.exists(subdir): os.makedirs(subdir)
@@ -101,9 +103,9 @@ if __name__ == '__main__':
         for line in lines:
             commands_list = get_commands(line, commands_list)
 
-    print "Recognized Commands:"
+    print("Recognized Commands:")
     for i in commands_list:
-        print i
+        print(i)
     NewList = []
     for element in itertools.product(*commands_list):
         NewList.append(element)
@@ -117,7 +119,7 @@ if __name__ == '__main__':
             name += "." + str(i)
         name += ext
         name = name.replace(' ', '')
-        print "Created File" , name
+        print("Created File" , name)
         file = open(os.path.join(subdir, name), 'w')
 
         # Generate output, replace lines with their options
