@@ -3,7 +3,9 @@
 
 from __future__ import print_function
 
-import sys, subprocess
+import sys
+import shlex
+from subprocess import check_output
 
 # Determines 'best' queue
 USAGE = "\n \
@@ -169,13 +171,8 @@ def main():
             output = [0, 0, str(total_cores) + " 2 " + Settings['-walltime'] + " 00:00:00  00:00:00"]
         else:
             bashCommand =('frank-avail ' + q)
-            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            if sys.version_info < (3,0):
-                output = str(process.communicate()[0]).split("\n")
-            else:
-                # This works
-                output = str(process.communicate()[0]).split("\\n")
-
+            # It took several iterations to arrive at this Python 2 & 3 compatible statement:
+            output = check_output(shlex.split(bashCommand)).decode("utf-8").split("\n")
 
         for line in output[2:]:
             line = str(line)
