@@ -3,8 +3,9 @@
 
 """
 This script submits Q-Chem jobs to the queue
+
 Authors: Daniel   Lambrecht (original)
-         Benjamin Albrecht (rewritten)
+         Benjamin  Albrecht (rewritten)
 ****
 If replacing old submit script,
 be sure to replace old best_queue as well!
@@ -18,10 +19,10 @@ TODO:
     - Read defaults from ~/.submitrc file
 
 """
-# Python3 compatibility ( must come first! )
+# Python3 compatibility
 from __future__ import print_function
 
-# Quit if incompatible version of Python
+# Required to check version
 import sys
 
 # Standard library imports
@@ -29,13 +30,16 @@ try:
     import os, grp, pwd, getpass
     import argparse
     import subprocess
+    from subprocess import check_output
     import shlex
     from uuid import uuid4
 except ImportError:
     if sys.version_info < (2,7):
-        print("Sorry, submit requires Python 2.7+")
+        print("Sorry, submit requires Python 2.7+\n")
         print("If you're on Frank, try:")
-        print("module load python/2.7.6-gcc48")
+        print("module load python/2.7.6-gcc48\n")
+        print("or, if you're daring...")
+        print("module load python/3.5.0a2")
         sys.exit(1)
 
 
@@ -70,9 +74,7 @@ def get_arguments(args=None):
                                      usage= "%(prog)s job [options] ",
                                      description = ''' %(prog)s is a script that auto-generates a pbs
                                      file and submits a job, utilizing another script, best_queue, which determines
-                                     the best queue to submit for minimizing wait times
-
-                                     A integer type argument''',
+                                     the best queue to submit for minimizing wait times''',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                     )
 
@@ -107,8 +109,7 @@ def choosequeue (opts):
         settings = ""
 
         bashCommand = ('best_queue' + settings)
-        process = subprocess.Popen(shlex.split(bashCommand), stdout=subprocess.PIPE)
-        status = process.communicate()[0]
+        status = check_output(shlex.split(bashCommand))
         output = str(status).split()
         queue = output[0]
         wait = output[4]
@@ -176,12 +177,13 @@ def writepbs(opts, job):
     file.write("module purge\n")
     file.write("module load intel/2013.0\n")
 
-    module="qchem/dlambrecht/4.2-trunk.20141216.omp.release"
-    qcrc = "/home/dlambrecht/software/qchem42.trunk.20141216.omp.release/qcrc"
+    # If user has Q-Chem module set up, we use that, else - use latest qcrc
+    # TODO: Manually grab latest - or make $(module load qchem) default to latest
+    module="qchem/dlambrecht/4.3-trunk.20150310.omp.release"
+    qcrc = os.path.join(opts.path, 'qcrc')
     moduleavail = "modulecmd bash avail " + module
-    #moduleavail = "eval $(/opt/sam/Modules/$MODULE_VERSION/bin/modulecmd bash avail " + module + ")"
-    process = subprocess.Popen(shlex.split(moduleavail), stdout=subprocess.PIPE)
-    status = process.communicate()[0]
+    status = check_output(shlex.split(moduleavail))
+    print(status)
 
     if module in status:
         file.write("module load " + module + "\n")
@@ -238,11 +240,11 @@ def submit(RUN):
     """
 
     bashCommand = ('qsub '+ RUN)
-    process = subprocess.Popen(shlex.split(bashCommand), stdout=subprocess.PIPE)
-    status = process.communicate()[0]
+    status = check_output(shlex.split(bashCommand))
+
+    #TODO - Get QUID of job and write to file for devious purposes
     #output = str(status).split()
     #QUID = output[0].split('.')[0]
-
     #stub, ext = os.path.splitext(RUN)
     #quidfile = stub+'.quid'
     #with open(quidfile, 'w') as handle:
