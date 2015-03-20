@@ -1,0 +1,84 @@
+#!/usr/bin/env python2
+""" Submodule for setting up TS searches """
+from __future__ import print_function
+
+import os
+import argparse
+
+import pybel
+
+
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: Arguments, if predefined
+    :returns: Opts, the arguments parsed
+    """
+    parser = argparse.ArgumentParser(
+        prog='stretch',
+        usage='%(prog)s xyzfile [options] ',
+        description=''' %(prog)s stretches bond length between
+        bond forming atoms by given number of angstroms
+        for initializing transition state searches''',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+    parser.add_argument('xyzfile', help='xyzfile input')
+    parser.add_argument('--N', default=2.0, type=int,
+                        help='length to stretch bond')
+
+    opts = parser.parse_args(args)
+    return opts
+
+
+def stretch(xyzfile, shift=2.0):
+    """Stretch top 2 atoms in xyzfile
+        (assumed to be bond-forming atoms of reaction in product)"""
+
+    # Naming crap
+    fname, _ = os.path.splitext(xyzfile)
+    xyzmarkedfile = fname+'-marked.xyz'
+    zmatmarkedfile = fname+'-marked.zmat'
+    zmatfile = fname+'.zmat'
+    tsxyzfile = fname+'-TS.xyz'
+
+    # First 2 atoms -> marker atoms
+    originalatoms = []
+    with open(xyzfile, 'r') as inpfile:
+        lines = inpfile.readlines()
+        with open(xyzmarkedfile, 'w') as outfile:
+            outfile.write(lines[0])
+            outfile.write(lines[1])
+            originalatoms.append(lines[2].split()[0])
+            originalatoms.append(lines[3].split()[0])
+            outfile.write('      '.join(['Lu'] + lines[2].split()[1:])+'\n')
+            outfile.write('      '.join(['Lr'] + lines[3].split()[1:])+'\n')
+            for line in lines[4:]:
+                outfile.write(line)
+
+    for molecule in pybel.readfile('xyz', xyzmarkedfile):
+        molecule.write(format='gzmat', filename=zmatmarkedfile, overwrite=True)
+
+    with open(zmatmarkedfile, 'r') as inpfile:
+        lines = inpfile.readlines()
+        with open(zmatfile, 'w') as outfile:
+            for line in lines:
+                if 'Lu' in line:
+                    outfile.write(line.replace('Lu', originalatoms[0]))
+                elif 'Lr' in line:
+                    outfile.write(line.replace('Lr', originalatoms[1]))
+                elif 'r2= ' in line:
+                    shifted = shift + float(line.split()[1])
+                    outfile.write('r2= ' + str(shifted)+'\n')
+                else:
+                    outfile.write(line)
+
+    for molecule in pybel.readfile('gzmat', zmatfile):
+        molecule.write(format='xyz', filename=tsxyzfile, overwrite=True)
+
+    os.remove(xyzmarkedfile)
+    os.remove(zmatmarkedfile)
+    os.remove(zmatfile)
+
+
+if __name__ == '__main__':
+    stretch(get_arguments().xyzfile, shift=get_arguments().N)
