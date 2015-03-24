@@ -2,12 +2,6 @@
 """
 Obtain the optimized geometry of a Q-Chem geometry optimization job
 Return cartesian coords
-
-
-TODO:
-    option for z-matrix
-    option for output -> molpro or q-chem
-    option for input -> molpro or q-chem
 """
 
 import os

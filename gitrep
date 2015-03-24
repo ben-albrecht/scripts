@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Pythonized version of gitrep bash script to update repositories """
+""" Pythonized version of gitrep bash script to manage repositories """
 
 from __future__ import print_function
 
@@ -105,6 +105,7 @@ def main(opts):
              for x in os.listdir(os.path.join(os.environ['HOME'], 'repos'))]
 
     dotfiles = os.path.join(os.environ['HOME'], '.dotfiles')
+    # TODO - rework this add options
 
     for repo in repos:
         gitup(repo)
