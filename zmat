@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+"""
+This is a xyz-to-zmatrix generation script that
+I wrote due to some bugs in OpenBabel z-matrix generation
+Obviously, OpenBabel is much faster, so this may not be feasible
+for large systems
+"""
 from __future__ import print_function
+from __future__ import division
 
 import argparse
+import math
 import numpy as np
 from numpy.linalg import norm
 
@@ -19,6 +27,8 @@ class ccData_xyz(ccData):
     ccData subclass for xyzfiles
     TODO: Checks for previous steps before continuing,
     i.e. check for dist_matrix before building conn_vector
+
+    Includes some hot new attributes and class methods
     """
 
     def __init__(self, *args, **kwargs):
@@ -40,7 +50,6 @@ class ccData_xyz(ccData):
             for j in [x for x in range(len(coords)) if x > i]:
                 self.distancematrix[i][j] = norm(coords[i] - coords[j])
                 self.distancematrix[j][i] = self.distancematrix[i][j]
-
 
     def print_distance_matrix(self):
         """Print distance matrix in formatted form"""
@@ -68,25 +77,188 @@ class ccData_xyz(ccData):
             print("\n", end="")
             idx += 1
 
-
-    def build_connectivity_vector(self):
+    def build_zmatrix(self):
         """
-        Build Connectivity Vector recursively. This is one of the
-        main components of the 'Z-Matrix Algorithm'
+       'Z-Matrix Algorithm'
+        Build main components of zmatrix:
+        Connectivity vector
+        Distances between connected atoms (atom >= 1)
+        Angles between connected atoms (atom >= 2)
+        Dihedral angles between connected atoms (atom >= 3)
         """
 
         # Atom 0 is connected to atom 0
-        self.connectivity = [0]
+        self.connectivity = np.zeros(len(self.atomnos)).astype(int)
+        # Starts with r1
+        self.distances = np.zeros(len(self.atomnos))
+        # Starts with a2
+        self.angles = np.zeros(len(self.atomnos))
+        self.angleconnectivity = np.zeros(len(self.atomnos)).astype(int)
+        # Starts with d3
+        self.dihedrals = np.zeros(len(self.atomnos))
+        self.dihedralconnectivity = np.zeros(len(self.atomnos)).astype(int)
 
-        atoms = range(1, len(self.distancematrix[0]))
+        atoms = range(1, len(self.atomnos))
         for atom in atoms:
-            # For current atom, find the nearest atom among previous atoms in list
+            # For current atom, find the nearest atom among previous atoms
             distvector = self.distancematrix[atom][:atom]
-            nearestindices = np.where(distvector == distvector[np.nonzero(distvector)].min())[0]
+            distmin = np.array(distvector[np.nonzero(distvector)]).min()
+            nearestindices = np.where(distvector == distmin)[0]
             nearestatom = nearestindices[0]
 
-            self.connectivity.append(nearestatom)
-            print(atom+1, self.connectivity[atom]+1, "%1.2f" % self.distancematrix[atom][nearestatom])
+            self.connectivity[atom] = nearestatom
+            self.distances[atom] = distmin
+
+            # Compute Angles
+            if atom >= 2:
+                atms = [0, 0, 0]
+                atms[0] = atom
+                atms[1] = self.connectivity[atms[0]]
+                atms[2] = self.connectivity[atms[1]]
+                if atms[2] == atms[1]:
+                    for idx in range(1, len(self.connectivity[:atom])):
+                        if self.connectivity[idx] in atms and not idx in atms:
+                            atms[2] = idx
+                            break
+
+                self.angleconnectivity[atom] = atms[2]
+
+                self.angles[atom] = self.calc_angle(atms[0], atms[1], atms[2])
+
+            # Compute Dihedral Angles
+            if atom >= 3:
+                atms = [0, 0, 0, 0]
+                atms[0] = atom
+                atms[1] = self.connectivity[atms[0]]
+                atms[2] = self.angleconnectivity[atms[0]]
+                atms[3] = self.angleconnectivity[atms[1]]
+                if atms[3] in atms[:3]:
+                    for idx in range(1, len(self.connectivity[:atom])):
+                        if self.connectivity[idx] in atms and not idx in atms:
+                            atms[3] = idx
+                            print(atom, atms)
+                            break
+
+                self.dihedrals[atom] =\
+                    self.calc_dihedral(atms[0], atms[1], atms[2], atms[3])
+                if math.isnan(self.dihedrals[atom]):
+                    self.dihedrals[atom] = 0.0
+
+                self.dihedralconnectivity[atom] = atms[3]
+
+    def calc_angle(self, atom1, atom2, atom3):
+        """Calculate angle between 3 atoms"""
+        vec1 = self.atomcoords[atom2] - self.atomcoords[atom1]
+        uvec1 = vec1 / norm(vec1)
+        vec2 = self.atomcoords[atom2] - self.atomcoords[atom3]
+        uvec2 = vec2 / norm(vec2)
+        return np.arccos(np.dot(uvec1, uvec2))*(180.0/np.pi)
+
+    def calc_dihedral(self, atom1, atom2, atom3, atom4):
+        """
+           Calculate dihedral angle between 4 atoms
+           For more information, see:
+               http://math.stackexchange.com/a/47084
+        """
+        # Vectors between 4 atoms
+        b1 = self.atomcoords[atom2] - self.atomcoords[atom1]
+        b2 = self.atomcoords[atom2] - self.atomcoords[atom3]
+        b3 = self.atomcoords[atom4] - self.atomcoords[atom3]
+
+        # Normal vector of plane containing b1,b2
+        n1 = np.cross(b1, b2)
+        un1 = n1 / norm(n1)
+
+        # Normal vector of plane containing b1,b2
+        n2 = np.cross(b2, b3)
+        un2 = n2 / norm(n2)
+
+        # un1, ub2, and m1 form orthonormal frame
+        ub2 = b2 / norm(b2)
+        um1 = np.cross(un1, ub2)
+
+        # dot(ub2, n2) is always zero
+        x = np.dot(un1, un2)
+        y = np.dot(um1, un2)
+
+        dihedral = np.arctan2(y, x)*(180.0/np.pi)
+        if dihedral < 0:
+            dihedral = 360.0 + dihedral
+        return dihedral
+
+    def print_gzmat(self):
+        """Print Guassian Z-Matrix Format"""
+        # TODO: Fix these so they are set via cclib inheritance
+        #print(self.filename, "\n")
+        #print(self.comment)
+        t = PeriodicTable()
+
+        print("\n")
+        for i in range(len(self.atomnos)):
+            idx = str(i+1)+" "
+            if i >= 3:
+                print(t.element[self.atomnos[i]], "",
+                      self.connectivity[i]+1, " r"+idx,
+                      self.angleconnectivity[i]+1, " a"+idx,
+                      self.dihedralconnectivity[i]+1, " d"+idx)
+            elif i == 2:
+                print(t.element[self.atomnos[i]], "",
+                      self.connectivity[i]+1, " r"+idx,
+                      self.angleconnectivity[i]+1, " a"+idx)
+            elif i == 1:
+                print(t.element[self.atomnos[i]], "",
+                      self.connectivity[i]+1, " r"+idx)
+            elif i == 0:
+                print(t.element[self.atomnos[i]])
+
+        print("Variables:")
+
+        for i in range(1, len(self.atomnos)):
+            idx = str(i+1)+"="
+            if i >= 3:
+                print("%s" % "r"+idx, "%6.4f" % self.distances[i])
+                print("%s" % "a"+idx, "%6.2f" % self.angles[i])
+                print("%s" % "d"+idx, "%6.2f" % self.dihedrals[i])
+            elif i == 2:
+                print("%s" % "r"+idx, "%6.4f" % self.distances[i])
+                print("%s" % "a"+idx, "%6.2f" % self.angles[i])
+            elif i == 1:
+                print("%s" % "r"+idx, "%6.4f" % self.distances[i])
+
+        """
+        0  3
+        C
+        O  1  r2
+        C  1  r3  2  a3
+        Si 3  r4  1  a4  2  d4
+        H  4  r5  3  a5  1  d5
+        H  4  r6  3  a6  1  d6
+        H  4  r7  3  a7  1  d7
+        H  3  r8  1  a8  2  d8
+        Variables:
+        r2= 1.1963
+        r3= 1.3054
+        a3= 179.97
+        r4= 1.8426
+        a4= 120.10
+        d4=  96.84
+        r5= 1.4710
+        a5= 109.90
+        d5=   0.12
+        r6= 1.4703
+        a6= 109.29
+        d6= 240.07
+        r7= 1.4704
+        a7= 109.41
+        d7= 120.21
+        r8= 1.0843
+        a8= 119.98
+        d8= 276.95
+        """
+
+    def print_zmat(self):
+        """Print Standard Z-Matrix Format"""
+        pass
 
 
 def get_arguments(args=None):
@@ -95,11 +267,12 @@ def get_arguments(args=None):
     :args: Arguments, if predefined
     :returns: Opts, the arguments parsed
     """
-    parser = argparse.ArgumentParser(prog = 'zmat',
-                                     usage = '%(prog)s  usage [options] ',
-                                     description = ''' %(prog)s  description''',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
-                                     )
+    parser = argparse.ArgumentParser(
+        prog='zmat',
+        usage='%(prog)s  usage [options] ',
+        description=''' %(prog)s  description''',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
     parser.add_argument('xyzfile', help=' help')
     opts = parser.parse_args(args)
     return opts
@@ -131,77 +304,18 @@ def parse_xyzfile(xyzfile):
     return ccData_xyz(attributes=attributes)
 
 
-
-
-def angle(atom1, atom2, atom3):
-    """Calculate angle between 3 atoms"""
-    pass
-
-
-def dihedralangle(atom1, atom2, atom3, atom4):
-    """Calculate dihedral angle between 4 atoms"""
-    pass
-
-def print_gzmat(ccdata, dist, conn):
-    """Print Guassian Z-Matrix Format"""
-    print(xyzfile, "\n\n")
-    print(elements[0])
-    """
-    0  3
-    C
-    O  1  r2
-    C  1  r3  2  a3
-    Si 3  r4  1  a4  2  d4
-    H  4  r5  3  a5  1  d5
-    H  4  r6  3  a6  1  d6
-    H  4  r7  3  a7  1  d7
-    H  3  r8  1  a8  2  d8
-    Variables:
-    r2= 1.1963
-    r3= 1.3054
-    a3= 179.97
-    r4= 1.8426
-    a4= 120.10
-    d4=  96.84
-    r5= 1.4710
-    a5= 109.90
-    d5=   0.12
-    r6= 1.4703
-    a6= 109.29
-    d6= 240.07
-    r7= 1.4704
-    a7= 109.41
-    d7= 120.21
-    r8= 1.0843
-    a8= 119.98
-    d8= 276.95
-    """
-    pass
-
-
-def print_zmat(ccdata, dist, conn):
-    """Print Standard Z-Matrix Format"""
-    pass
-
-
 def main(xyzfile):
     """Main function for xyz to zmatrix conversion"""
     xyzdata = parse_xyzfile(xyzfile)
 
     xyzdata.build_distance_matrix()
 
-    xyzdata.print_distance_matrix()
+    xyzdata.build_zmatrix()
 
-    xyzdata.build_connectivity_vector()
-
-    # TODO: Compute vectors distances[1,n], angles[2,n], dihedrals[3,n]
-
-    # TODO
-    #print_gzmat(ccdata, dist, conn)
+    xyzdata.print_gzmat()
 
     # TODO
     #print_zmat(ccdata, dist, conn)
-
 
 
 if __name__ == '__main__':
