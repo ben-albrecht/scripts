@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+from __future__ import print_function
+
+import argparse
+import numpy as np
+from numpy.linalg import norm
+
+try:
+    from cclib.parser.data import ccData
+    from cclib.parser.utils import PeriodicTable
+except ImportError:
+    print("Failed to load cclib!")
+    raise
+
+
+class ccData_xyz(ccData):
+    """
+    ccData subclass for xyzfiles
+    TODO: Checks for previous steps before continuing,
+    i.e. check for dist_matrix before building conn_vector
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Adding some new attributes for xyzfiles"""
+
+        super(ccData_xyz, self).__init__(*args, **kwargs)
+
+        self._attrtypes['comment'] = str
+        self._attrtypes['filename'] = str
+        self._attrtypes['distancematrix'] = np.ndarray
+        self._attrtypes['connectivity'] = list
+        self._attrtypes['elements'] = list
+
+    def build_distance_matrix(self):
+        """Build distance matrix between all atoms"""
+        coords = self.atomcoords
+        self.distancematrix = np.zeros((len(coords), len(coords)))
+        for i in range(len(coords)):
+            for j in [x for x in range(len(coords)) if x > i]:
+                self.distancematrix[i][j] = norm(coords[i] - coords[j])
+                self.distancematrix[j][i] = self.distancematrix[i][j]
+
+
+    def print_distance_matrix(self):
+        """Print distance matrix in formatted form"""
+
+        # Title
+        print("\nDistance Matrix")
+
+        # Row Indices
+        for i in range(len(self.distancematrix)):
+            print("%3d" % i, end="  ")
+
+        print("\n", end="")
+        idx = 0
+        for vector in self.distancematrix:
+
+            # Column indices
+            print(idx, end=" ")
+
+            # Actual Values
+            for element in vector:
+                if not element == 0:
+                    print("%1.2f" % element, end=" ")
+                else:
+                    print("%1s" % " ", end="    ")
+            print("\n", end="")
+            idx += 1
+
+
+    def build_connectivity_vector(self):
+        """
+        Build Connectivity Vector recursively. This is one of the
+        main components of the 'Z-Matrix Algorithm'
+        """
+
+        # Atom 0 is connected to atom 0
+        self.connectivity = [0]
+
+        atoms = range(1, len(self.distancematrix[0]))
+        for atom in atoms:
+            # For current atom, find the nearest atom among previous atoms in list
+            distvector = self.distancematrix[atom][:atom]
+            nearestindices = np.where(distvector == distvector[np.nonzero(distvector)].min())[0]
+            nearestatom = nearestindices[0]
+
+            self.connectivity.append(nearestatom)
+            print(atom+1, self.connectivity[atom]+1, "%1.2f" % self.distancematrix[atom][nearestatom])
+
+
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: Arguments, if predefined
+    :returns: Opts, the arguments parsed
+    """
+    parser = argparse.ArgumentParser(prog = 'zmat',
+                                     usage = '%(prog)s  usage [options] ',
+                                     description = ''' %(prog)s  description''',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
+                                     )
+    parser.add_argument('xyzfile', help=' help')
+    opts = parser.parse_args(args)
+    return opts
+
+
+def parse_xyzfile(xyzfile):
+    """ Parse xyzfile to ccData_xyz object """
+    assert(type(xyzfile) == str)
+
+    attributes = {}
+    ptable = PeriodicTable()
+
+    with open(xyzfile, 'r') as handle:
+        lines = handle.readlines()
+
+        # ccData attribute parsing
+        geometry = [x.split() for x in lines[2:]]
+        coordinates = [x[1:] for x in geometry]
+        atomnos = [ptable.number[x[0]] for x in geometry]
+        attributes['atomcoords'] = np.array(coordinates)
+        attributes['atomnos'] = np.array(atomnos)
+
+        # Custom ccData_xyz attributes
+        elements = [x[0] for x in geometry]
+        attributes['elements'] = elements
+        attributes['comment'] = lines[1]
+        attributes['filename'] = xyzfile
+
+    return ccData_xyz(attributes=attributes)
+
+
+
+
+def angle(atom1, atom2, atom3):
+    """Calculate angle between 3 atoms"""
+    pass
+
+
+def dihedralangle(atom1, atom2, atom3, atom4):
+    """Calculate dihedral angle between 4 atoms"""
+    pass
+
+def print_gzmat(ccdata, dist, conn):
+    """Print Guassian Z-Matrix Format"""
+    print(xyzfile, "\n\n")
+    print(elements[0])
+    """
+    0  3
+    C
+    O  1  r2
+    C  1  r3  2  a3
+    Si 3  r4  1  a4  2  d4
+    H  4  r5  3  a5  1  d5
+    H  4  r6  3  a6  1  d6
+    H  4  r7  3  a7  1  d7
+    H  3  r8  1  a8  2  d8
+    Variables:
+    r2= 1.1963
+    r3= 1.3054
+    a3= 179.97
+    r4= 1.8426
+    a4= 120.10
+    d4=  96.84
+    r5= 1.4710
+    a5= 109.90
+    d5=   0.12
+    r6= 1.4703
+    a6= 109.29
+    d6= 240.07
+    r7= 1.4704
+    a7= 109.41
+    d7= 120.21
+    r8= 1.0843
+    a8= 119.98
+    d8= 276.95
+    """
+    pass
+
+
+def print_zmat(ccdata, dist, conn):
+    """Print Standard Z-Matrix Format"""
+    pass
+
+
+def main(xyzfile):
+    """Main function for xyz to zmatrix conversion"""
+    xyzdata = parse_xyzfile(xyzfile)
+
+    xyzdata.build_distance_matrix()
+
+    xyzdata.print_distance_matrix()
+
+    xyzdata.build_connectivity_vector()
+
+    # TODO: Compute vectors distances[1,n], angles[2,n], dihedrals[3,n]
+
+    # TODO
+    #print_gzmat(ccdata, dist, conn)
+
+    # TODO
+    #print_zmat(ccdata, dist, conn)
+
+
+
+if __name__ == '__main__':
+    opts = get_arguments()
+    main(opts.xyzfile)
