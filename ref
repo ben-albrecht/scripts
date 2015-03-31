@@ -7,8 +7,8 @@
 #   if argument is a string in file, opens that file
 
 # libs
-source ~/repos/scripts/lib/bash/colors.sh
-source ~/repos/scripts/lib/bash/conditions.sh
+source ~/repos/scripts/lib/colors.sh
+source ~/repos/scripts/lib/conditions.sh
 
 Query=$1
 Ref="$HOME/repos/ref"

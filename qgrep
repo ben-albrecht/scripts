@@ -59,6 +59,9 @@ else
     exit 1
 fi
 
+grep -H "Total job time" $target
+grep -H "Optimization Cycle:" $target | tail -1
+
 if [ ! -z $scf ]; then
     echo "SCF Energies:"
     grep -H "Convergence criterion met" $target | awk '{print $1, $3}' | tail -1
@@ -71,6 +74,3 @@ if [ ! -z $mp2 ]; then
     echo "MP2 Energies:"
     grep -H "MP2         total energy" $target | awk '{print $1, $6}'
 fi
-
-grep -H "Total job time" $target
-grep -H "Optimization Cycle:" $target | tail -1
