@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Quick error checking for common outcomes of Q-Chem jobs
+
+
+# Add new errors as they appear
+errorOPT="OPTIMIZE fatal error"
+errorSCF="SCF failed to converge"
+success="Thank you very much"
+total=$(ls -l "$@" | wc -l)
+
+echo  "$errorSCF"
+grep -c "$errorSCF" "$@" | grep :1
+echo "$errorOPT"
+grep -c "$errorOPT" "$@" | grep :1
+echo "$success"
+grep -c "$success" "$@" | grep :1
+
+echo "---------------------"
+echo  "$errorSCF"
+grep -c "$errorSCF" "$@" | grep :1 | wc -l
+echo "$errorOPT"
+grep -c "$errorOPT" "$@" | grep :1  | wc -l
+echo "$success"
+grep -c "$success" "$@" | grep :1 | wc -l
+echo "Total: $total"
+
+# Check for any new errors: (Hell of a 1-liner)
+grep -c "SCF failed to converge" $(grep -c "Thank you" $(grep -c "OPTIMIZE fatal error" "$@" | grep :0 | awk 'BEGIN{FS=":"} {print $1}') | grep :0 | awk 'BEGIN{FS=":"} {print $1}') | grep :0
