@@ -3,6 +3,12 @@
 import time
 import subprocess
 
+
+"""
+TODO: Combine with best_queue
+
+
+"""
 def qstat(pipes):
     """ qstat shell script wrapper """
     qstatcommand = 'qstat'

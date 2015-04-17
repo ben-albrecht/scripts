@@ -29,10 +29,12 @@ import sys
 try:
     import os, grp, pwd, getpass
     import argparse
-    import subprocess
     from subprocess import check_output
     import shlex
     from uuid import uuid4
+    from imp import load_source
+    import best_queue
+    import subprocess
 except ImportError:
     if sys.version_info < (2,7):
         print("Sorry, submit requires Python 2.7+\n")
@@ -82,8 +84,8 @@ def get_arguments(args=None):
     parser.add_argument('job',        type=str, nargs='+', help='Input File')
 
     parser.add_argument('--program',  type=str,  default='qchem', help='program to run on input file')
-    parser.add_argument('--ppn',      type=int,  default=1, help='number of processors')
-    parser.add_argument('--nodes',    type=int,  default=1, help='number of nodes')
+    parser.add_argument('--ppn',      type=int,  default=1, help='processors per node')
+    parser.add_argument('--nodes',    type=int,  default=1, help='nodes')
     parser.add_argument('--mem',      type=int,  default=-1, help='gb of memory')
     parser.add_argument('--disk',     type=int,  default=-1, help='gb of scratch disk space')
     parser.add_argument('--queue',    type=str,  default='auto', help='queue to submit to, auto for best, aggressive for all')
@@ -91,10 +93,12 @@ def get_arguments(args=None):
     parser.add_argument('--qos',      type=str,  default='investor', help='priority', choices=['low','investor'])
     parser.add_argument('--account',  type=str,  default=def_account, help='account with Gold on Frank' )
     parser.add_argument('--path',     type=str,  default=def_path, help='path to program')
-    parser.add_argument('--save',     type=bool, default=False, help='Save PBS file when True')
-    parser.add_argument('--dry',      type=bool, default=False, help='Do not run qsub on PBS file when True')
+    parser.add_argument('--save',     action='store_true', help='Save PBS file when True')
+    parser.add_argument('--dry',      action='store_true', help='Do not run qsub on PBS file when True')
     parser.add_argument('--investor', type=bool, default=True, help='Add prefix "i" to queue name if you are an investor group')
     parser.add_argument('--email',    type=str,  default='off', help='Email address for job start/finish notifications, set to "off" to turn off')
+    parser.add_argument('--jobname',  type=str,  default='off', help='jobname to display in queue')
+    parser.add_argument('--qcrc',     action='store_true', help='Use qcrc instead of checking for Q-Chem modules')
 
     opts = parser.parse_args(args)
 
@@ -106,25 +110,14 @@ def choosequeue (opts):
     """
     if opts.queue == "auto":
 
-        settings = ""
+        queuetimes = best_queue.main(ppn=opts.ppn, nodes=opts.nodes, mem=opts.mem, disk=opts.disk, walltime=opts.walltime, investor=opts.investor)
 
-        bashCommand = ('best_queue' + settings)
-        status = check_output(shlex.split(bashCommand))
-        output = str(status).split()
-        queue = output[0]
-        wait = output[4]
+        print("Choices of queues:")
+        for queuetime in queuetimes:
+            print(queuetime[0])
 
-        if "sh:" in status[1]:
-            print("Error running best_queue script:")
-            print(status)
-            print("Selecting shared as default queue")
-            return 'shared'
-
-
-        # Signal that we're 'investors' on Frank
-        if opts.investor == True:
-            if not queue == "test":
-                queue = "i" + queue
+        queue = queuetimes[0][0]
+        wait = queuetimes[0][1]
 
         print("Best submission queue: ", queue)
         print("Estimated wait time: ", wait)
@@ -141,7 +134,7 @@ def writepbs(opts, job):
     # Create unique ID for job
     JOB_ID = uuid4().hex # a unique id for the current job
     RUN = "." + job_name + "." + JOB_ID + ".pbs"
-    job_dir = os.path.basename(os.path.dirname(os.path.realpath(job)))
+
 
     print("run script = ", RUN)
 
@@ -149,46 +142,64 @@ def writepbs(opts, job):
 
     file.write("#!/bin/bash\n")
     file.write("\n")
-    # TODO: A lot of assumptions going on here, maybe add some args for this (dirname), and refactor
-    file.write("#PBS -N " + job_dir + "/" + job_name + "\n")
+
+    # Jobname
+    if opts.jobname == 'off':
+        job_dir = os.path.basename(os.path.dirname(os.path.realpath(job)))
+        file.write("#PBS -N " + job_dir + "/" + job_name + "\n")
+    else:
+        file.write("#PBS -N " + opts.jobname + "\n")
+
+    # Nodes
     file.write("#PBS -l nodes=" + str(opts.nodes) + ":ppn=" + str(opts.ppn) + "\n")
+
+    # Walltime
     file.write("#PBS -l walltime=" + opts.walltime + "\n")
+
+    # Memory
     if opts.mem > 0:
         file.write("#PBS -l mem=" + str(opts.mem) + "gb\n")
         file.write("#PBS -l pmem=" + str(opts.mem) + "gb\n")
     if opts.disk > 0:
         file.write("#PBS -l ddisk=" + str(opts.disk) + "gb\n")
-    file.write("#PBS -q " + opts.queue + "\n")
-    file.write("#PBS -l qos=" + opts.qos + "\n")
-    file.write("#PBS -j oe\n")
-    #file.write("#PBS -A " + opts.account + "\n")
 
+    # Queue
+    file.write("#PBS -q " + opts.queue + "\n")
+
+    # Quality of Service
+    file.write("#PBS -l qos=" + opts.qos + "\n")
+
+    # Error Logging
+    file.write("#PBS -j oe\n")
+
+    # Email Logging
     if not opts.email == "off":
         file.write("#PBS -m abe\n")
         file.write("#PBS -M " + opts.email + "\n")
     file.write("\n")
 
-    #file.write("JOBNAME=" + job_name + "\n")
+    # Bash variables
     file.write("NODES=" + str(opts.nodes) + "\n")
     file.write("PPN=" + str(opts.ppn) + "\n")
     file.write("\n")
 
+    # Program
     file.write("# Load Q-Chem Modules\n")
     file.write("module purge\n")
     file.write("module load intel/2013.0\n")
 
-    # If user has Q-Chem module set up, we use that, else - use latest qcrc
-    # TODO: Manually grab latest - or make $(module load qchem) default to latest
-    module="qchem/dlambrecht/4.3-trunk.20150310.omp.release"
-    qcrc = os.path.join(opts.path, 'qcrc')
+    # Modules / qcrc - module manually updated
+    # This will load lexigrapically greatest version
+    module="qchem/dlambrecht"
     moduleavail = "modulecmd bash avail " + module
-    status = check_output(shlex.split(moduleavail))
-    print(status)
+    status = check_output(shlex.split(moduleavail), stderr=subprocess.STDOUT)
 
-    if module in status:
+    if module in status and not opts.qcrc:
         file.write("module load " + module + "\n")
     else:
+        qcrc = os.path.join(opts.path, 'qcrc')
         file.write(". " + qcrc+"\n")
+
     file.write("\n")
 
     file.write("cd ${PBS_O_WORKDIR}\n")

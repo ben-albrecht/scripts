@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# This will only work on frank...
+for qcheminput in *.qc.in; do
+    echo $qcheminput
+    submit $qcheminput --ppn=4 --walltime=12:00:00
+done
