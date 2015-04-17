@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sshfs -o IdentityFile=~/.ssh/id_rsa bja39@frank.sam.pitt.edu: /mnt/frank

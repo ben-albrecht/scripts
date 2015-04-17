@@ -3,7 +3,7 @@
 # Simplified Build script for Q-Chem with various options
 # Must have a qchem module loaded
 
-ReleaseConf="./configure release intel noopt2 mkl openmp"
+ReleaseConf="./configure intel relwdeb timings mkl openmp"
 RelFastConf="./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 release mkl"
 FullConf="./configure release intel mkl openmp"
 DevConf="./configure intel nointracule nomgc noopt2 nolibdftn nonewpath2 debug mkl"
@@ -43,7 +43,7 @@ else
         echo "link qcprog.exe, and cronutils"
 
         cd $QC
-        ./configure release intel noopt2 mkl openmp
+        ./configure intel relwdeb timings mkl openmp
         cd $QC/build
 
         sed -i -e 's/-O2/-O0/g' $QC/build/CMakeCache.txt
@@ -149,6 +149,6 @@ else
   fi
 fi
 
-
+# Play a nice little ping when we finish
 aplay $HOME/repos/scripts/sounds/finish.wav > /dev/null 2>&1
 #spd-say --volume 10 "qcmake complete"
