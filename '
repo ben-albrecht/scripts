@@ -90,21 +90,22 @@ def parse_commands(inp, markers='$()'):
     with open(inp, 'r') as handle:
         lines = handle.readlines()
 
-        regex = ''.join(['\\',mrk[0],'\\',mrk[1],'(.*)','\\',mrk[2]])
+        regex = '\\'+mrk[0]+'\\'+mrk[1]+'(.*)'+'\\'+mrk[2]
         # Search for input commands noted by markers
         for line in lines:
+            #regex_command = re.compile(r'\$\((.*)\)')
             regex_command = re.compile(r''+regex)
             match = re.search(regex_command, line)
             if match:
                 commandgroup = match.group(0)
-                commands = ''.join([x for x in list(commandgroup) if not (x == mrk[0] or x == mrk[1] or x == mrk[2])]).rsplit(',')
+                commands = ''.join([x for x in list(commandgroup) if not (x == '$' or x == '(' or x == ')')]).rsplit(',')
                 commands_list.append(commands)
     return commands_list
 
 
 def cpg(inp, delimiter='.', markers='$()'):
     """Cartesian Product Generator"""
-    mrk = list(markers)
+
     if not path.isfile(inp) :
         errormsg = "File" + inp + "Not found\n Try 'cpg --help'"
         raise IOError(errormsg)
@@ -150,9 +151,8 @@ def cpg(inp, delimiter='.', markers='$()'):
         # replace_commands(pathname, commands, markers)
         with open(pathname, 'w') as handle:
             j = 0
-            regex = ''.join(['\\',mrk[0],'\\',mrk[1],'(.*)','\\',mrk[2]])
             for line in lines:
-                regex_command = re.compile(r''+regex)
+                regex_command = re.compile(r'\$\((.*)\)')
                 match = re.search(regex_command, line)
                 if match:
                     newline = line.replace(match.group(0), element[j])

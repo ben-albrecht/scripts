@@ -13,8 +13,8 @@ echo  "$errorSCF"
 grep -c "$errorSCF" "$@" | grep :1
 echo "$errorOPT"
 grep -c "$errorOPT" "$@" | grep :1
-echo "$success"
-grep -c "$success" "$@" | grep :1
+#echo "$success"
+#grep -c "$success" "$@" | grep :1
 
 echo "---------------------"
 echo  "$errorSCF"
