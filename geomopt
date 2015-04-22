@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser
+
+def get_arguments(args=None):
+    parser = ArgumentParser(prog='geomopt', usage='%(prog) [options] outputfilename')
+
+    parser.add_argument('outputfilename', help='Q-Chem outputfile name')
+    opts = parser.parse_args(args)
+    return opts
+
+
+def geomopt(fname):
+    """Resume geometry optimization job that failed"""
+    with open(fname, 'r') as handle:
+        lines = handle.readlines()
+        atomcoords = []
+        for line in lines:
+            if 'Standard Nuclear Orientation (Angstroms)' in line:
+                line = next(lines)
+                atomelements = []
+                atomcoords = []
+                line = next(lines)
+                while list(set(line.strip())) != ['-']:
+                    entry = line.split()
+                    atomelements.append(entry[1])
+                    atomcoords.append(list(map(float, entry[2:])))
+                    line = next(lines)
+
+                atomcoords.append(atomcoords)
+    print(atomcoords)
+
+
+
+if __name__ == '__main__':
+    opts = get_arguments()
+    geomopt(opts.outputfilename)
