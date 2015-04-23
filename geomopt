@@ -1,73 +1,80 @@
 #!/usr/bin/env python
-"""Had to write my own parser because cclib can't read broken outputs """
+"""Script to set up a new geometry optimization resuming from the
+   last geometry of a failed geometry optimization Q-Chem job.
+
+   Ideally, this would be outsourced to cclib, but cclib currently
+   cannot parse unconverged Q-Chem jobs (TODO)
+
+"""
 from __future__ import print_function
 from argparse import ArgumentParser
 from os import path
 
 class geomopt(object):
     def __init__(self, fname):
-        self.filelength = self.file_len(fname)
+        """Parses output for inputs and geometries upon instantiation"""
+        self.filelength = self._file_len(fname)
         self.idx = 0
         self.atomcoords_list = []
         self.atomelements = []
         self.inputcommands_list = []
 
-        self.parse(fname)
+        self._parse(fname)
 
-    def file_len(self, fname):
-        """Most efficient way I know to get a file length"""
+    def _file_len(self, fname):
+        """Most efficient way I know to get a file length in Python"""
         with open(fname) as f:
             for i, l in enumerate(f):
                 pass
         return i + 1
 
-    def parse(self, fname):
+    def _parse(self, fname):
         """Parse geometries and inputs out of file"""
         with open(fname, 'r') as self.handle:
             while self.idx < self.filelength:
-                line = self.nextline()
-                self.parseinput(line)
-                self.parsegeometry(line)
+                line = self._nextline()
+                self._parseinput(line)
+                self._parsegeometry(line)
 
-    def parseinput(self, line):
-        """Parse inputs"""
+    def _parseinput(self, line):
+        """Parse inputs based, check for dashes to prevent false positives"""
         if 'User input:' in line:
             dashes = '--------------------------------------------------------------'
-            line = self.nextline()
+            line = self._nextline()
             if dashes in line:
                 inputcommands = []
                 while True:
-                    line = self.nextline()
+                    line = self._nextline()
                     if not dashes in line:
                         inputcommands.append(line)
                     else: break
                 self.inputcommands_list.append(inputcommands)
 
-    def parsegeometry(self, line):
-        """Parse geometries"""
+    def _parsegeometry(self, line):
+        """Parse geometries, save elements as actual symbol"""
         if 'Standard Nuclear Orientation (Angstroms)' in line:
-            line = self.nextline(3)
+            line = self._nextline(3)
             atomcoords = []
             atomelements = []
             while list(set(line.strip())) != ['-']:
                 entry = line.split()
                 atomelements.append(entry[1])
                 atomcoords.append(list(map(float, entry[2:])))
-                line = self.nextline()
+                line = self._nextline()
             if not self.atomelements:
                 self.atomelements = atomelements
 
             self.atomcoords_list.append(atomcoords)
 
-    def nextline(self, num=1):
-        """Cleaner nextline"""
+    def _nextline(self, num=1):
+        """Wrapper for handle.readline, to keep our line number idx"""
         for x in range(num):
             line = self.handle.readline()
             self.idx += 1
         return line
 
     def printinput(self):
-        """Print stuff"""
+        """Print new Q-Chem input to STDOUT"""
         atom_template = '{:3s} {:15.10f} {:15.10f} {:15.10f}'
         atomcoords = self.atomcoords_list[-1]
         separator = ''
@@ -87,7 +94,7 @@ class geomopt(object):
             separator = '\n@@@\n'
 
     def writeinput(self, inputfilename):
-        """Write stuff"""
+        """Write new Q-Chem input to provided filename"""
         atom_template = '{:3s} {:15.10f} {:15.10f} {:15.10f}'
         atomcoords = self.atomcoords_list[-1]
         separator = ''
@@ -108,14 +115,7 @@ class geomopt(object):
                 separator = '\n@@@\n'
 
 
-    def newgeometry(self):
-        """Replace old geometry in inputfile with new geometery"""
-        self.atomcoords_list = []
-        self.atomelements = []
-        self.inputcommands_list = []
-
-
-def get_arguments(args=None):
+def _get_arguments(args=None):
     parser = ArgumentParser(prog='geomopt',
             usage='geomopt [options] outputfilename',
             description='Resumes a failed Q-Chem geom-opt calc')
@@ -127,34 +127,41 @@ def get_arguments(args=None):
     opts = parser.parse_args(args)
     return opts
 
-def get_integer(s):
-    """Quick way to see if file is already indexed"""
+def _get_integer(s):
+    """Check if char is cast-able to integer"""
     try:
         num = int(s)
         return num
     except ValueError:
         return 1
 
+def get_filename(outputfilename):
+    """Generate filename, add index if name already present. For example:
+       foo.out -> foo.qcm already exists, so return foo1.qcm
+       foo1.out -> foo1.qcm already exists, so return foo2.qcm
+    """
+    stub, ext = path.splitext(outputfilename)
+    idx = _get_integer(list(stub)[-1])
+    while path.isfile(stub+str(idx)+'.qcm'):
+        idx += 1
+    fname = stub+str(idx)+'.qcm'
+    return fname
+
+
 if __name__ == '__main__':
-    opts = get_arguments()
+    opts = _get_arguments()
     geom = geomopt(opts.outputfilename)
 
     # Design Flaw or Feature... User can never use filename '-1'
     if not opts.o == -1:
         if opts.o:
-            # Write to inputfiles designated
-            for inputfile in opts.o:
-                geom.writeinput(inputfile)
+            for fname in opts.o:
+                print("Wrote new inputfile to ", fname)
+                geom.writeinput(fname)
         else:
-            # Write to indexed name based on output name
-            stub, ext = path.splitext(opts.outputfilename)
-            idx = get_integer(list(stub)[-1])
-            while path.isfile(stub+str(idx)+'.qcm'):
-                idx += 1
-            fname = stub+str(idx)+'.qcm'
+            fname = get_filename(opts.outputfilename)
             print("Wrote new inputfile to ", fname)
             geom.writeinput(fname)
     else:
-        # Print to STDOUT
         geom.printinput()
 
