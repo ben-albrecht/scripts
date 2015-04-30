@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+from numpy import loadtxt
+from matplotlib import pyplot as plt
+
+def plotvfile():
+    """Plot VFile.txt from Q-Chem FSM Output"""
+    data = loadtxt('Vfile.txt')
+    indices = [x[0] for x in data]
+    energies = [x[4] for x in data] # relative kcal/mol
+    plt.scatter(indices, energies)
+    plt.show()
+
+
+if __name__ == "__main__":
+    plotvfile()
