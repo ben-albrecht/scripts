@@ -1,0 +1,8 @@
+#!/bin/bash
+
+module load mopac
+
+for job in *.mop; do
+    echo $job
+    /home/ben/opt/apps/mopac/MOPAC2012.exe $job
+done
