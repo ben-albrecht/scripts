@@ -124,16 +124,15 @@ def choosequeue (opts):
 
         return queue
 
-
-def writepbs(opts, job):
+def writepbs(opts, jobs):
     """
-    Write submission script
+    Write submission script for batch of jobs
     """
 
-    job_name, __ = os.path.splitext(job)
+    job_names = [os.path.splitext(job)[0] for job in jobs]
     # Create unique ID for job
     JOB_ID = uuid4().hex # a unique id for the current job
-    RUN = "." + job_name + "." + JOB_ID + ".pbs"
+    RUN = "." + job_names[0] + "." + JOB_ID + ".pbs"
 
 
     print("run script = ", RUN)
@@ -146,7 +145,7 @@ def writepbs(opts, job):
     # Jobname
     if opts.jobname == 'off':
         job_dir = os.path.basename(os.path.dirname(os.path.realpath(job)))
-        file.write("#PBS -N " + job_dir + "/" + job_name + "\n")
+        file.write("#PBS -N " + job_dir + "/" + job_names[0] + "\n")
     else:
         file.write("#PBS -N " + opts.jobname + "\n")
 
@@ -186,6 +185,7 @@ def writepbs(opts, job):
     # Program
     file.write("# Load Q-Chem Modules\n")
     file.write("module purge\n")
+    file.write("module load mpi\n")
     file.write("module load intel/2013.0\n")
 
     # Modules / qcrc - module manually updated
@@ -203,7 +203,8 @@ def writepbs(opts, job):
     file.write("\n")
 
     file.write("cd ${PBS_O_WORKDIR}\n")
-    file.write("cp ${PBS_O_WORKDIR}/"+job+" ${LOCAL}\n")
+    for job in jobs:
+        file.write("cp ${PBS_O_WORKDIR}/"+job+" ${LOCAL}\n")
     file.write("cd ${LOCAL}\n")
     file.write("\n")
 
@@ -217,12 +218,14 @@ def writepbs(opts, job):
     file.write("trap run_on_exit EXIT\n")
     file.write("\n")
 
+    file.write('listofjobs="')
+    for jobname in job_names:
+        file.write(jobname + ' ')
+    file.write('"\n')
 
     parallel_string = ""
-    if int(opts.nodes) > 1:
-        total_cores = str( int(opts.nodes) * int(opts.ppn) )
-        parallel_string = "-np " + str(opts.nodes) + " -nt " + str(opts.ppn)
-    elif int(opts.ppn) > 1:
+
+    if int(opts.ppn) > 1:
         parallel_string = "-nt ${PPN}"
 
     save_string = ""
@@ -230,18 +233,28 @@ def writepbs(opts, job):
         save_string = " -save "
 
     file.write("\n")
-    file.write("`which qchem` " + parallel_string + save_string + " " + job + " ${PBS_O_WORKDIR}/" + job_name + ".out " + job_name + "." + JOB_ID + "\n")
+    file.write('PROGRAM="`which qchem` ' + parallel_string + save_string + '"\n')
     file.write("\n")
+
+    file.write('i=0\n')
+    file.write('for job in $listofjobs; do\n')
+    file.write('    let node=($i)*${PPN}+1\n')
+    file.write('    host=$(sed -n ${node}p $PBS_NODEFILE)\n')
+    file.write('    echo "$job running on $host with ${PPN} cores"\n')
+    file.write('    mpirun -np 1 --host $host $PROGRAM $job.qcm $job.out &\n')
+    file.write('    let i+=1\n')
+    file.write('done\n')
 
     if opts.save == True:
         file.write("cp -r ${LOCAL}/* ${PBS_O_WORKDIR}/\n")
 
+    file.write("wait\n")
     file.write("rm ${PBS_O_WORKDIR}/" + RUN + "\n")
+
 
     file.close()
 
     return RUN
-
 
 def submit(RUN):
     """ Wrapper function for qsub / Writes QUID file if aggressively submitting
@@ -257,22 +270,28 @@ def main():
     # Get arguments using argparse
     opts = get_arguments()
 
-    # Create job name
-    for job in opts.job:
-        print(job)
-        job_name = os.path.splitext(job)[0]
-        print("job name = ", job_name)
+    jobslist = []
+    while opts.job:
+        jobs = []
+        for node in range(opts.nodes):
+            jobs.append(opts.job.pop())
+            if not opts.job: break
+        jobslist.append(jobs)
 
-        # Choose optimal queue
+    for jobs in jobslist:
+        print(jobs)
+        job_names = [os.path.splitext(job)[0] for job in jobs]
+        print("job names = ", job_names)
+
         if opts.queue == "auto":
-            opts.queue = choosequeue(opts)
+            print("auto queue not yet supported for batched jobs")
+            sys.exit(1)
 
         # Write batch script file
-        RUN = writepbs(opts, job)
+        RUN = writepbs(opts, jobs)
 
         if opts.dry == False:
             submit(RUN)
-
 
 if __name__ == '__main__':
     main()

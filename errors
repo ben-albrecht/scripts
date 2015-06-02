@@ -10,11 +10,11 @@ success="Thank you very much"
 total=$(ls -l "$@" | wc -l)
 
 echo  "$errorSCF"
-grep -c "$errorSCF" "$@" | grep :1
+grep -c "$errorSCF" "$@" | grep :1 | awk 'BEGIN{FS=":"} {print $1}'
 echo "$errorOPT"
-grep -c "$errorOPT" "$@" | grep :1
+grep -c "$errorOPT" "$@" | grep :1 | awk 'BEGIN{FS=":"} {print $1}'
 #echo "$success"
-#grep -c "$success" "$@" | grep :1
+#grep -c "$success" "$@" | grep :1 | awk 'BEGIN{FS=":"} {print $1}'
 
 echo "---------------------"
 echo  "$errorSCF"
