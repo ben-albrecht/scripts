@@ -9,7 +9,20 @@ def plotvfile():
     indices = [x[0] for x in data]
     energies = [x[4] for x in data] # relative kcal/mol
     plt.scatter(indices, energies)
+
+    imax = len(energies)-1
+
+    for i in range(len(energies))[::-1]:
+        print(i)
+        if energies[i] >= energies[imax]:
+            imax = i
+        else:
+            print('TS at point', imax+1)
+            print(energies[imax], 'kcal/mol')
+            break
+
     plt.show()
+
 
 
 if __name__ == "__main__":
