@@ -93,12 +93,13 @@ def get_arguments(args=None):
     parser.add_argument('--qos',      type=str,  default='investor', help='priority', choices=['low','investor'])
     parser.add_argument('--account',  type=str,  default=def_account, help='account with Gold on Frank' )
     parser.add_argument('--path',     type=str,  default=def_path, help='path to program')
-    parser.add_argument('--save',     action='store_true', help='Save PBS file when True')
+    parser.add_argument('--savepbs',  action='store_true', help='Save submission script (PBS file) when set')
+    parser.add_argument('--save',     action='store_true', help='Save scratch directory when set')
     parser.add_argument('--dry',      action='store_true', help='Do not run qsub on PBS file when True')
     parser.add_argument('--investor', type=bool, default=True, help='Add prefix "i" to queue name if you are an investor group')
     parser.add_argument('--email',    type=str,  default='off', help='Email address for job start/finish notifications, set to "off" to turn off')
     parser.add_argument('--jobname',  type=str,  default='off', help='jobname to display in queue')
-    parser.add_argument('--qcrc',     action='store_true', help='Use qcrc instead of checking for Q-Chem modules')
+    parser.add_argument('--qcrc',     type=str,  default='off', help='qcrc path, defaults to qcrc instead of checking for Q-Chem modules, \'auto\' will find the last modified qcrc')
 
     opts = parser.parse_args(args)
 
@@ -184,7 +185,7 @@ def writepbs(opts, job):
     file.write("\n")
 
     # Program
-    file.write("# Load Q-Chem Modules\n")
+    file.write("# Load Modules\n")
     file.write("module purge\n")
     file.write("module load intel/2013.0\n")
 
@@ -194,11 +195,18 @@ def writepbs(opts, job):
     moduleavail = "modulecmd bash avail " + module
     status = check_output(shlex.split(moduleavail), stderr=subprocess.STDOUT)
 
-    if module in status and not opts.qcrc:
+    if module in status and opts.qcrc == 'off':
         file.write("module load " + module + "\n")
-    else:
+    elif opts.qcrc == 'auto' or opts.qcrc == 'off':
         qcrc = os.path.join(opts.path, 'qcrc')
         file.write(". " + qcrc+"\n")
+    else:
+        qcrc = opts.qcrc
+        if os.path.isfile(qcrc):
+            file.write(". " + qcrc+"\n")
+        else:
+            print(qcrc, 'does not exist')
+            raise FileNotFoundError
 
     file.write("\n")
 
@@ -207,15 +215,16 @@ def writepbs(opts, job):
     file.write("cd ${LOCAL}\n")
     file.write("\n")
 
-    file.write("run_on_exit() {\n")
-    file.write("    set -v\n")
-    file.write("    rm $LOCAL/pathtable\n")
-    file.write("    cp -v -R $LOCAL/* $PBS_O_WORKDIR\n")
-    file.write("}\n")
-    file.write("\n")
+    if opts.save:
+        file.write("run_on_exit() {\n")
+        file.write("    set -v\n")
+        file.write("    rm $LOCAL/pathtable\n")
+        file.write("    cp -v -R $LOCAL/* $PBS_O_WORKDIR\n")
+        file.write("}\n")
+        file.write("\n")
 
-    file.write("trap run_on_exit EXIT\n")
-    file.write("\n")
+        file.write("trap run_on_exit EXIT\n")
+        file.write("\n")
 
 
     parallel_string = ""
@@ -226,17 +235,18 @@ def writepbs(opts, job):
         parallel_string = "-nt ${PPN}"
 
     save_string = ""
-    if opts.save == True:
+    if opts.save:
         save_string = " -save "
 
     file.write("\n")
     file.write("`which qchem` " + parallel_string + save_string + " " + job + " ${PBS_O_WORKDIR}/" + job_name + ".out " + job_name + "." + JOB_ID + "\n")
     file.write("\n")
 
-    if opts.save == True:
+    if opts.savepbs:
         file.write("cp -r ${LOCAL}/* ${PBS_O_WORKDIR}/\n")
 
-    file.write("rm ${PBS_O_WORKDIR}/" + RUN + "\n")
+    if not opts.savepbs:
+        file.write("rm ${PBS_O_WORKDIR}/" + RUN + "\n")
 
     file.close()
 
