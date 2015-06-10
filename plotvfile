@@ -2,13 +2,33 @@
 
 from numpy import loadtxt
 from matplotlib import pyplot as plt
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
-def plotvfile():
+
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: Arguments, if predefined
+    :returns: Opts, the arguments parsed
+    """
+    parser = ArgumentParser(prog='plotvfile',
+                            usage='%(prog)s Vfile.txt [options] ',
+                            description=''' %(prog)s plots Vfile.txt and guesses TS''',
+                            formatter_class=ArgumentDefaultsHelpFormatter
+                            )
+    parser.add_argument('--noplot', default=False, action='store_true', help='Do not plot')
+
+    opts = parser.parse_args(args)
+
+    return opts
+
+
+def plotvfile(noplot=False):
     """Plot VFile.txt from Q-Chem FSM Output"""
     data = loadtxt('Vfile.txt')
     indices = [x[0] for x in data]
-    energies = [x[4] for x in data] # relative kcal/mol
-    plt.scatter(indices, energies)
+    # relative kcal/mol
+    energies = [x[4] for x in data]
 
     imax = len(energies)-1
 
@@ -21,9 +41,11 @@ def plotvfile():
             print(energies[imax], 'kcal/mol')
             break
 
-    plt.show()
-
+    if not noplot:
+        plt.scatter(indices, energies)
+        plt.show()
 
 
 if __name__ == "__main__":
-    plotvfile()
+    opts = get_arguments()
+    plotvfile(noplot=opts.noplot)
