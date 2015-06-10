@@ -11,15 +11,16 @@ from argparse import ArgumentParser
 from os import path
 
 class geomopt(object):
-    def __init__(self, fname):
+    def __init__(self, fname, basis='', jobtype=''):
         """Parses output for inputs and geometries upon instantiation"""
         self.filelength = self._file_len(fname)
         self.idx = 0
         self.atomcoords_list = []
         self.atomelements = []
         self.inputcommands_list = []
-
         self._parse(fname)
+        self.basis = basis
+        self.jobtype = jobtype
 
     def _file_len(self, fname):
         """Most efficient way I know to get a file length in Python"""
@@ -73,59 +74,60 @@ class geomopt(object):
             self.idx += 1
         return line
 
-    def printinput(self):
-        """Print new Q-Chem input to STDOUT"""
+    @property
+    def inputstring(self):
+        """Return string of input"""
+        inpstr = ''
         atom_template = '{:3s} {:15.10f} {:15.10f} {:15.10f}'
         atomcoords = self.atomcoords_list[-1]
         separator = ''
         for inputcommands in self.inputcommands_list:
             i = 0
-            print(separator, end='')
+            inpstr += separator
             while i < len(inputcommands):
                 if '$molecule' in inputcommands[i] and not 'read' in inputcommands[i+1]:
-                    print(inputcommands[i], end='')
-                    print(inputcommands[i+1], end='')
+                    inpstr += inputcommands[i]
+                    inpstr += inputcommands[i+1]
                     for element, (x, y, z) in zip(self.atomelements, atomcoords):
-                        print(atom_template.format(element, x, y, z))
+                        inpstr += atom_template.format(element, x, y, z) + '\n'
                     i += len(self.atomelements) + 1
                 else:
-                    print(inputcommands[i], end='')
+                    if 'jobtyp' in inputcommands[i] and self.jobtype:
+                        inpstr += '    jobtype {0}\n'.format(self.jobtype)
+                    elif 'basis' in inputcommands[i] and self.basis:
+                        inpstr += '    basis {0}\n'.format(self.basis)
+                    else:
+                        inpstr += inputcommands[i]
                 i += 1
             separator = '\n@@@\n'
 
+        return inpstr
+
+    def printinput(self):
+        """Print new Q-Chem input to STDOUT"""
+        print(self.inputstring)
+
     def writeinput(self, inputfilename):
         """Write new Q-Chem input to provided filename"""
-        atom_template = '{:3s} {:15.10f} {:15.10f} {:15.10f}'
-        atomcoords = self.atomcoords_list[-1]
-        separator = ''
         with open(inputfilename, 'w') as finp:
-            for inputcommands in self.inputcommands_list:
-                i = 0
-                finp.write(separator)
-                while i < len(inputcommands):
-                    if '$molecule' in inputcommands[i] and not 'read' in inputcommands[i+1]:
-                        finp.write(inputcommands[i])
-                        finp.write(inputcommands[i+1])
-                        for element, (x, y, z) in zip(self.atomelements, atomcoords):
-                            finp.write(atom_template.format(element, x, y, z) + '\n')
-                        i += len(self.atomelements) + 1
-                    else:
-                        finp.write(inputcommands[i])
-                    i += 1
-                separator = '\n@@@\n'
+            finp.write(self.inputstring)
 
 
 def _get_arguments(args=None):
     parser = ArgumentParser(prog='geomopt',
-            usage='geomopt [options] outputfilename',
-            description='Resumes a failed Q-Chem geom-opt calc')
+                            usage='geomopt [options] outputfilename',
+                            description='Resumes a failed Q-Chem geom-opt calc')
 
     parser.add_argument('outputfilename', help='Q-Chem outputfile name')
     parser.add_argument('-o', nargs='*', default=-1,
-                        help='Write to new inputfile, give no filename for default indexed naming')
+                        help='Write to new inputfile, give no filename for auto indexed naming')
+
+    parser.add_argument('--jobtype', default='', help='New jobtype')
+    parser.add_argument('--basis', default='', help='New basis')
 
     opts = parser.parse_args(args)
     return opts
+
 
 def _get_integer(s):
     """Check if char is cast-able to integer"""
@@ -134,6 +136,7 @@ def _get_integer(s):
         return num
     except ValueError:
         return 1
+
 
 def get_filename(outputfilename):
     """Generate filename, add index if name already present. For example:
@@ -150,7 +153,7 @@ def get_filename(outputfilename):
 
 if __name__ == '__main__':
     opts = _get_arguments()
-    geom = geomopt(opts.outputfilename)
+    geom = geomopt(opts.outputfilename, basis=opts.basis, jobtype=opts.jobtype)
 
     # Design Flaw or Feature... User can never use filename '-1'
     if not opts.o == -1:
