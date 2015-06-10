@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
 from numpy import loadtxt
-from matplotlib import pyplot as plt
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+try:
+    from matplotlib import pyplot as plt
+except:
+    NOPLOT = True
+
 
 
 def get_arguments(args=None):
@@ -48,4 +52,6 @@ def plotvfile(noplot=False):
 
 if __name__ == "__main__":
     opts = get_arguments()
+    if NOPLOT:
+        opts.noplot = True
     plotvfile(noplot=opts.noplot)
