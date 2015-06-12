@@ -1,0 +1,119 @@
+#!/usr/bin/env mpirun -np 4 /usr/bin/env python3
+# encoding: utf-8
+
+from __future__ import print_function
+
+import sys
+
+import shlex
+from subprocess import check_call
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from concurrent.futures import ThreadPoolExecutor
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+
+def mastermind(num_minions, commands):
+    """TODO: Docstring for mastermind.
+
+    :rank: TODO
+    :input: TODO
+    :returns: TODO
+
+    """
+    print('hello from mastermind')
+    comm.barrier()
+    destination = 0
+    for command in commands:
+        print('command & destination:', command, destination)
+        if destination % num_minions == 0:
+            with ThreadPoolExecutor() as executor:
+                commandfuture = executor.submit(run, command)
+
+        elif destination < num_minions:
+            print('mastermind sending command:', command, 'to', destination)
+            comm.send(command, dest=destination)
+
+        else:
+            newdestination = destination % num_minions
+            openrank = comm.recv(source=MPI.ANY_SOURCE)
+            print('mastermind sending command:', command, 'to', destination)
+            comm.send(command, dest=newdestination)
+
+        destination = destination + 1
+
+    for rank in range(1, num_minions):
+        comm.send('COMPLETE', dest=rank)
+
+    return 0
+
+
+def minion(rank):
+    comm.barrier()
+
+    while True:
+
+        print('rank', rank, 'waiting on command from mastermind')
+        command = comm.recv(source=0)
+        if command == 'COMPLETE':
+            return 0
+
+        print('rank', rank, 'received command:', command)
+        status = run(command)
+        comm.send(rank, dest=0)
+
+
+
+def run(command):
+    status = check_call(shlex.split(command))
+    return status
+
+
+
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: Arguments, if predefined
+    :returns: Opts, the arguments parsed
+    """
+    parser = ArgumentParser(prog='pcp',
+                            usage='mpiexec -np NODES python %(prog)s configfile.cfg [options] \nOR\npcp configfile.cfg',
+                            description=''' %(prog)s  stands for parallel-command-processor
+                                            It is a Pythonized version of PBS Tools parallel-command-processor
+                                            See http://www.nics.tennessee.edu/~troy/pbstools/man/parallel-command-processor.1.html
+                                            for more information''',
+                            formatter_class=ArgumentDefaultsHelpFormatter
+                            )
+    parser.add_argument('configfile', help='Configuration File of shell commands, split by lines')
+
+    opts = parser.parse_args(args)
+    return opts
+
+
+
+
+def main(configfile=None):
+    """The main function
+    :returns: TODO
+    """
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+    name = MPI.Get_processor_name()
+
+    if rank == 0:
+        with open(configfile, 'r') as handle:
+            lines = [x.strip('\n') for x in handle.readlines()]
+        mastermind(size, lines)
+    else:
+        minion(rank)
+
+    return
+
+
+if __name__ == '__main__':
+    rank = comm.Get_rank()
+    if rank == 0:
+        opts = get_arguments()
+        main(configfile=opts.configfile)
+    else:
+        main()
