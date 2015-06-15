@@ -1,29 +1,82 @@
-#!/bin/bash
+#!/usr/bin/env python
+# encoding: utf-8
 
-# Quick error checking for common outcomes of Q-Chem jobs
+from __future__ import print_function
+
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 
-# Add new errors as they appear
-errorOPT="OPTIMIZE fatal error"
-errorSCF="SCF failed to converge"
-success="Thank you very much"
-total=$(ls -l "$@" | wc -l)
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: Arguments, if predefined
+    :returns: Opts, the arguments parsed
+    """
+    parser = ArgumentParser(prog='errors',
+                            usage='%(prog)s outputs [options] ',
+                            description=''' %(prog)s  finds errors in Q-Chem jobs''',
+                            formatter_class=ArgumentDefaultsHelpFormatter
+                            )
+    parser.add_argument('outputs',nargs="+",help='Q-Chem output files')
 
-echo  "$errorSCF"
-grep -c "$errorSCF" "$@" | grep :1 | awk 'BEGIN{FS=":"} {print $1}'
-echo "$errorOPT"
-grep -c "$errorOPT" "$@" | grep :1 | awk 'BEGIN{FS=":"} {print $1}'
-#echo "$success"
-#grep -c "$success" "$@" | grep :1 | awk 'BEGIN{FS=":"} {print $1}'
+    opts = parser.parse_args(args)
+    return opts
 
-echo "---------------------"
-echo  "$errorSCF"
-grep -c "$errorSCF" "$@" | grep :1 | wc -l
-echo "$errorOPT"
-grep -c "$errorOPT" "$@" | grep :1  | wc -l
-echo "$success"
-grep -c "$success" "$@" | grep :1 | wc -l
-echo "Total: $total"
 
-# Check for any new errors: (Hell of a 1-liner)
-grep -c "SCF failed to converge" $(grep -c "Thank you" $(grep -c "OPTIMIZE fatal error" "$@" | grep :0 | awk 'BEGIN{FS=":"} {print $1}') | grep :0 | awk 'BEGIN{FS=":"} {print $1}') | grep :0
+
+def grep(string, outputfile):
+    with open(outputfile, 'r') as handle:
+        for line in handle.readlines():
+            if string in line:
+                return True
+        return False
+
+
+def main(outputfiles):
+    """TODO: Docstring for main.
+
+    :outputs: list of outputfiles
+    :returns: TODO
+
+    """
+    success = 'Thank you very much'
+    errors = {
+            'OPTIMIZE fatal error': [],
+            'MAXIMUM OPTIMIZATION CYCLES REACHED': [],
+            'SCF failed to converge': [],
+             }
+
+    successes = []
+
+    unknowns = []
+
+    for outputfile in outputfiles:
+        if grep(success, outputfile):
+            successes.append(outputfile)
+
+    for outputfile in [opf for opf in outputfiles if opf not in successes]:
+        for error in errors.keys():
+            if grep(error, outputfile):
+                errors[error].append(outputfile)
+                break
+        else:
+            unknowns.append(outputfile)
+
+    # Report
+    print('total jobs:', len(outputfiles))
+    print('successful jobs:', len(successes))
+    print('failed jobs:', len(outputfiles) - len(successes))
+    print('error report:')
+    for error in errors.keys():
+        print(error, ':', len(errors[error]))
+    print('unknown errors:', len(unknowns))
+    for unknown in unknowns:
+        print(unknown)
+
+    return (successes, errors, unknowns)
+
+
+
+if __name__ == '__main__':
+    opts = get_arguments()
+    main(opts.outputs)
