@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+from __future__ import print_function
+
+import os
+from subprocess import check_output
+
+import shlex
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
+
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: Arguments, if predefined
+    :returns: Opts, the arguments parsed
+    """
+    parser = ArgumentParser(prog='rsink',
+                            usage='%(prog)s action [options] ',
+                            description=''' %(prog)s push or pull changes to mirrored path on frank''',
+                            formatter_class=ArgumentDefaultsHelpFormatter
+                            )
+    parser.add_argument('action', choices=['push', 'pull', 'log'], help='action to push or pull changes')
+    parser.add_argument('directory', help='directory to push, pull or get log for')
+
+    opts = parser.parse_args(args)
+    return opts
+
+def main(action, directory):
+    """
+    This poorly named scripts allows quickly rsyncing a mirrored path hosted elsewhere
+    (Frank in my case). It is a poor man's version control - I would use git, hg, svn, etc.,
+    but there is too much data and I don't need the precision of those tools (we are never merging)
+
+    :action: string that tells us what to do
+    :directory: directory to perform action on
+    """
+    relpwd = os.path.relpath(os.curdir, os.path.expanduser('~'))
+    print(relpwd)
+
+    if directory[-1] == '/':
+        directory = directory.rstrip('/')
+
+    command = ''
+    output = ''
+
+    if action == 'push':
+        command = 'rsync -avP ' + directory + '/ frank:' + relpwd + '/' + directory
+    elif action == 'pull':
+        command = 'rsync -avP frank:' + relpwd + '/' + directory + '/ ' + directory
+    elif action == 'log':
+        pass
+    else:
+        print('Invalid Action')
+
+    print(command)
+    output = check_output(shlex.split(command))
+    print(output.decode())
+    return
+
+
+if __name__ == '__main__':
+    opts = get_arguments()
+    main(opts.action, opts.directory)
