@@ -8,7 +8,7 @@ import numpy as np
 from numpy.linalg import norm
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
-from qcl import parse, write, zmatrix
+from qcl import zmatrix, parse
 
 
 def get_arguments(args=None):
@@ -28,10 +28,12 @@ def get_arguments(args=None):
     return opts
 
 
-def main(xyzfile1, xyzfile2, thresh = 2.0):
+def main(xyzfile1, xyzfile2, thresh=2.0):
     """Main function of script"""
     ccdata1 = zmatrix.internalize(xyzfile1)
     ccdata2 = zmatrix.internalize(xyzfile2)
+    #ccdata1 = parse.xyzfile(xyzfile1)
+    #ccdata2 = parse.xyzfile(xyzfile2)
 
     if ccdata1.natom != ccdata2.natom:
         print("Not same number of atoms")
@@ -58,7 +60,7 @@ def RMSD(ccdata1, ccdata2):
     rmsd = 0.0
     maxdiff = 0.0
     for i in range(natom):
-        diff = norm(ccdata1.atomcoords[i] - ccdata2.atomcoords[i])
+        diff = norm(ccdata1.atomcoords[0][i] - ccdata2.atomcoords[0][i])
         rmsd += diff
         if diff > maxdiff:
             maxdiff = diff
@@ -74,13 +76,15 @@ def translatetoCOM(ccdata):
     com = np.zeros(3, dtype=np.float)
     totalmass = 0
     for i in range(natoms):
-        com += ccdata.atommasses[i] * ccdata.atomcoords[i]
+        print(ccdata.atomcoords[0][i])
+        print(ccdata.atommasses[i])
+        com += ccdata.atommasses[i] * ccdata.atomcoords[0][i]
         totalmass += ccdata.atommasses[i]
 
     com /= totalmass
 
     for i in range(natoms):
-        ccdata.atomcoords[i] -= com
+        ccdata.atomcoords[0][i] -= com
 
 
 def alignmolecules(ccdata1, ccdata2):
@@ -89,8 +93,8 @@ def alignmolecules(ccdata1, ccdata2):
     rotationmatrix = _findrotationmatrix(ccdata1, ccdata2)
 
     for i in range(ccdata2.natom):
-        ccdata2.atomcoords[i] = np.transpose(
-            np.dot(rotationmatrix, np.transpose(ccdata2.atomcoords[i])))
+        ccdata2.atomcoords[0][i] = np.transpose(
+            np.dot(rotationmatrix, np.transpose(ccdata2.atomcoords[0][i])))
 
 
 def _findrotationmatrix(ccdata1, ccdata2):
@@ -99,7 +103,7 @@ def _findrotationmatrix(ccdata1, ccdata2):
     J = np.zeros((3, 3), dtype=np.float)
 
     for i in range(natoms):
-        J += np.outer(ccdata1.atomcoords[i], ccdata2.atomcoords[i])
+        J += np.outer(ccdata1.atomcoords[0][i], ccdata2.atomcoords[0][i])
 
     U, s, V = np.linalg.svd(J)
 
@@ -111,7 +115,7 @@ def _findrotationmatrix(ccdata1, ccdata2):
 def printcoords(ccdata):
     """Quick print"""
     print(ccdata.natom, '\n')
-    atomcoords = ccdata.atomcoords.tolist()
+    atomcoords = ccdata.atomcoords[0].tolist()
     atomnos = ccdata.atomnos.tolist()
 
     #atomgeoms = zip(atomnos, atomcoords)
@@ -125,4 +129,3 @@ if __name__ == '__main__':
     opts = get_arguments()
     if not main(opts.xyzfile1, opts.xyzfile2):
         print('threshold surpassed')
-

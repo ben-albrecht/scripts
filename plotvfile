@@ -2,7 +2,9 @@
 
 from numpy import loadtxt
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
 try:
+    NOPLOT = False
     from matplotlib import pyplot as plt
 except:
     NOPLOT = True
