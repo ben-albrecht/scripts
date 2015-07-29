@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from os import path
 
 class geomopt(object):
-    def __init__(self, fname, basis='', jobtype=''):
+    def __init__(self, fname, basis='', jobtype='', pcm=0):
         """Parses output for inputs and geometries upon instantiation"""
         self.filelength = self._file_len(fname)
         self.idx = 0
@@ -21,6 +21,7 @@ class geomopt(object):
         self._parse(fname)
         self.basis = basis
         self.jobtype = jobtype
+        self.pcm = pcm
 
     def _file_len(self, fname):
         """Most efficient way I know to get a file length in Python"""
@@ -96,6 +97,12 @@ class geomopt(object):
                         inpstr += '    jobtype {0}\n'.format(self.jobtype)
                     elif 'basis' in inputcommands[i] and self.basis:
                         inpstr += '    basis {0}\n'.format(self.basis)
+                    elif '$rem' in inputcommands[i] and self.pcm > 0:
+                        inpstr += '\n$solvent\n'
+                        inpstr += '    dielectric {0}\n'.format(self.pcm)
+                        inpstr += '$end\n\n'
+                        inpstr += inputcommands[i]
+                        inpstr += '    solvent_method pcm\n'
                     else:
                         inpstr += inputcommands[i]
                 i += 1
@@ -124,6 +131,7 @@ def _get_arguments(args=None):
 
     parser.add_argument('--jobtype', default='', help='New jobtype')
     parser.add_argument('--basis', default='', help='New basis')
+    parser.add_argument('--pcm', default='0', help='Add PCM with dielectric')
 
     opts = parser.parse_args(args)
     return opts
@@ -153,7 +161,7 @@ def get_filename(outputfilename):
 
 if __name__ == '__main__':
     opts = _get_arguments()
-    geom = geomopt(opts.outputfilename, basis=opts.basis, jobtype=opts.jobtype)
+    geom = geomopt(opts.outputfilename, basis=opts.basis, jobtype=opts.jobtype, pcm=opts.pcm)
 
     # Design Flaw or Feature... User can never use filename '-1'
     if not opts.o == -1:
