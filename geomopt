@@ -21,7 +21,8 @@ class geomopt(object):
         self._parse(fname)
         self.basis = basis
         self.jobtype = jobtype
-        self.pcm = pcm
+        self.pcm = float(pcm)
+
 
     def _file_len(self, fname):
         """Most efficient way I know to get a file length in Python"""
