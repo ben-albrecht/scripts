@@ -2,7 +2,9 @@
 
 from numpy import loadtxt
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
 try:
+    NOPLOT = False
     from matplotlib import pyplot as plt
 except:
     NOPLOT = True
@@ -33,6 +35,7 @@ def plotvfile(noplot=False):
     indices = [x[0] for x in data]
     # relative kcal/mol
     energies = [x[4] for x in data]
+    absenergies = [x[3] for x in data]
 
     imax = len(energies)-1
 
@@ -43,6 +46,7 @@ def plotvfile(noplot=False):
         else:
             print('TS at point', imax+1)
             print(energies[imax], 'kcal/mol')
+            print(absenergies[imax], 'Eh')
             break
 
     if not noplot:
