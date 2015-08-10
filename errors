@@ -18,6 +18,7 @@ def get_arguments(args=None):
                             formatter_class=ArgumentDefaultsHelpFormatter
                             )
     parser.add_argument('outputs',nargs="+",help='Q-Chem output files')
+    parser.add_argument('--filenames', '-n', action='store_true', default=False, help='Print only file names that have failed')
 
     opts = parser.parse_args(args)
     return opts
@@ -32,7 +33,7 @@ def grep(string, outputfile):
         return False
 
 
-def main(outputfiles):
+def main(outputfiles, printfilenames=False):
     """TODO: Docstring for main.
 
     :outputs: list of outputfiles
@@ -44,11 +45,10 @@ def main(outputfiles):
             'OPTIMIZE fatal error': [],
             'MAXIMUM OPTIMIZATION CYCLES REACHED': [],
             'SCF failed to converge': [],
+            'unknown': []
              }
 
     successes = []
-
-    unknowns = []
 
     for outputfile in outputfiles:
         if grep(success, outputfile):
@@ -60,23 +60,28 @@ def main(outputfiles):
                 errors[error].append(outputfile)
                 break
         else:
-            unknowns.append(outputfile)
+            errors['unknown'].append(outputfile)
 
-    # Report
-    print('total jobs:', len(outputfiles))
-    print('successful jobs:', len(successes))
-    print('failed jobs:', len(outputfiles) - len(successes))
-    print('error report:')
-    for error in errors.keys():
-        print(error, ':', len(errors[error]))
-    print('unknown errors:', len(unknowns))
-    for unknown in unknowns:
-        print(unknown)
+    if printfilenames:
+        for outputfiles in errors.values():
+            for outputfile in outputfiles:
+                print(outputfile)
+    else:
+        # Report
+        print('total jobs:', len(outputfiles))
+        print('successful jobs:', len(successes))
+        print('failed jobs:', len(outputfiles) - len(successes))
+        print('error report:')
+        for error in errors.keys():
+            print(error, ':', len(errors[error]))
+        print('unknown errors:', len(errors['unknown']))
+        for outputfile in errors['unknown']:
+            print(outputfile)
 
-    return (successes, errors, unknowns)
+    return (successes, errors)
 
 
 
 if __name__ == '__main__':
     opts = get_arguments()
-    main(opts.outputs)
+    main(opts.outputs, printfilenames=opts.filenames)
