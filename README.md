@@ -52,21 +52,21 @@ Manage multiple git repositories at once
 
 
 ## Undocumented
-dirtags.sh
-geomopt
-plotvfile
-qchemall
-qcmake
-qcmake.py
-qctags
-qdelr
-qfold
-qgrep
-rextract
-rmsd
-runall
-search
-submit
-submitbatch
-submitqchemall
-zmat
+* dirtags.sh
+* geomopt
+* plotvfile
+* qchemall
+* qcmake
+* qcmake.py
+* qctags
+* qdelr
+* qfold
+* qgrep
+* rextract
+* rmsd
+* runall
+* search
+* submit
+* submitbatch
+* submitqchemall
+* zmat
