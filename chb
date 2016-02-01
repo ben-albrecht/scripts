@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Quick script to build chapel programs within the build system
+
+if [ -a $1.compopts ]; then
+    compopts=$1.compopts
+else
+    compopts=COMPOPTS
+fi
+
+if [ ! -z $2 ]; then
+    line=$2
+else
+    line=1
+fi
+
+flags=$(sed -n "${line}"p ${compopts})
+
+set -x
+chpl --fast ${flags} $1.chpl -o $1
