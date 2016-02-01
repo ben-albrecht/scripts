@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Usage:
+#   nrun -n 100 <command>
+#
+
+args=$@
+silent=0
+
+cleanargs() {
+    # Remove substring from args, and modify globally
+
+    args=$1
+    substring=$2
+    
+    cleanedargs=$(echo "$args" | sed "s/$substring//")
+
+    eval "args='$cleanedargs'"
+}
+
+
+while getopts ":sn:" opt; do
+    case $opt in
+        n)
+            n=${OPTARG}
+            cleanargs "${args}" "-n"
+            cleanargs "${args}" "${OPTARG}"
+        ;;
+        s)
+            silent=1
+            cleanargs "${args}" "-s"
+        ;;
+    esac
+done
+
+if [ $silent -eq 0 ]; then
+    echo "Running command ${n} times: ${args}"
+fi
+
+for i in `seq "${n}"`; do
+    ${args}
+done
