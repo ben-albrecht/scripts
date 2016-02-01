@@ -6,6 +6,7 @@
 
 args=$@
 silent=0
+n=1
 
 cleanargs() {
     # Remove substring from args, and modify globally
