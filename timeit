@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+from __future__ import print_function
+
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import timeit
+
+
+
+def get_arguments(args=None):
+    """
+    Get arguments from command line
+    :args: arguments, if predefined
+    :returns: arguments parsed
+    """
+    parser = ArgumentParser(prog='timeit',
+                            usage='%(prog)s  usage [options] ',
+                            description=''' %(prog)s  description''',
+                            formatter_class=ArgumentDefaultsHelpFormatter
+                            )
+    parser.add_argument('cmd', help='Command to time')
+
+    opts = parser.parse_args(args)
+    return opts
+
+
+
+
+def executecommand(cmd):
+    """Execute command and return output"""
+    return output
+
+
+def main(cmd):
+    """
+    Run Python's 'timeit' on a command to measure execution time
+
+    :cmd: Command to run
+    """
+    setup =\
+    """import shlex\nfrom subprocess import Popen, PIPE"""
+
+    print(timeit.timeit(stmt='print(Popen(shlex.split("{0}"), stdout=PIPE, stderr=PIPE).communicate()[0])'.format(cmd), setup=setup))
+    #import shlex
+    #from subprocess import Popen, PIPE
+    #print(Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE).communicate()[0])
+
+
+if __name__ == '__main__':
+    args = get_arguments()
+    main(args.cmd)

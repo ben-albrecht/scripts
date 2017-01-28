@@ -13,7 +13,7 @@ cleanargs() {
 
     args=$1
     substring=$2
-    
+
     cleanedargs=$(echo "$args" | sed "s/$substring//")
 
     eval "args='$cleanedargs'"
