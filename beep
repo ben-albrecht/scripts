@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Pass exit code as argument, e.g.
+# ./some command; beep $?
+
+
+SCRIPTS="/Users/balbrecht/dev/scripts"
+
+if [ "$1" = "0" ]
+then
+    afplay ${SCRIPTS}/sounds/success.wav
+elif [ "$1" = "" ]
+then
+    echo "No exit code given. Usage: beep \$?"
+    exit 1
+else
+    afplay ${SCRIPTS}/sounds/fail.wav
+fi

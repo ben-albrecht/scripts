@@ -1,0 +1,3 @@
+#!/bin/bash
+
+install_name_tool -add_rpath /opt/intel/mkl/lib $1

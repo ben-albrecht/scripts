@@ -1,0 +1,1 @@
+--dynamic -lmkl_core -lmkl_intel_lp64 -lmkl_sequential -lpthread -lm -ldl --ccflags -Wno-enum-conversion -sisBLAS_MKL=true

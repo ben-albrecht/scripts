@@ -1,32 +1,54 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 
 from __future__ import print_function
 
 import os
 import shlex
+import stat
 import subprocess
 
 """
 Print git branch names
 """
+# TODO -- separate 'chapel' repositories from other repositories
 
 def main():
     HOME=os.getenv('HOME')
-    chapel = os.path.abspath(os.path.join(HOME, 'opt', 'dev', 'chapel'))
+    chapel = os.path.abspath(os.path.join(HOME, 'dev', 'chapel'))
     chapeldirs = [os.path.join(chapel, d) for d in os.listdir(chapel)]
-    chapelrepos = [r for r in chapeldirs if os.path.exists(os.path.join(r, '.git'))]
+    chapelrepos = [r for r in chapeldirs if os.path.exists(os.path.join(r, '.git')) and os.path.exists(os.path.join(r, 'compiler'))]
     for repo in chapelrepos:
         os.chdir(os.path.join(chapel, repo))
-        cmd = 'git branch'
-        p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p.wait()
-        output, err = p.communicate()
-        for line in output.split('\n'):
-            if '*' in line:
-                branch = line.replace('* ', '')
+        branch = gitbranch()
         repository = os.path.split(repo)[-1]
-        print('{0:20} : {1}'.format(repository, branch))
+        build_symbol = '*'
+        if chpl_built():
+            build_symbol = ' '
+
+        print('{2} {0:20} : {1}'.format(repository, branch, build_symbol))
+
+# Get branch name
+def gitbranch():
+    cmd = 'git branch'
+    p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.wait()
+    output, err = p.communicate()
+    branch = ''
+    for line in output.decode().split('\n'):
+        if '*' in line:
+            branch = line.replace('* ', '')
+    return branch
+
+# Has chpl been built since the last fetch?
+# Problem: when rebuilding chapel, chpl is not always updated
+def chpl_built():
+    if os.path.isfile('bin/darwin/chpl') and os.path.isfile('.git/FETCH_HEAD'):
+        chpl_mtime = os.stat('bin/darwin/chpl')[stat.ST_MTIME]
+        git_mtime = os.stat('.git/FETCH_HEAD')[stat.ST_MTIME]
+        return chpl_mtime >= git_mtime
+    else:
+        return False
 
 
 

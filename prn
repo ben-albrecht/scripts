@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""prn - Edit and view user-written command line documentation, as needed.
+
+TODO: rename 'ref' (or something else)
+"""
+
+"""
+# Ideas
+- multiple file locations
+- storing notes in a git repo
+- Use https://github.com/willmcgugan/rich for highlighted output
+- Use a python zipapp for deployment?
+- load commands into bash history 
+    - append to ~/.bash_history
+    - run `history -r`
+
+# Similar projects
+
+- https://github.com/hkdobrev/notetaker
+- https://github.com/srsudar/eg
+    - damn this is cool
+"""
+
+
+
+import os
+import shlex
+import subprocess
+import sys
+
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
+# TODO: command line completion would be *so* sick for this script
+
+def parse_args():
+    """Parse arguments"""
+    parser = ArgumentParser(prog=__file__,
+                            description=__doc__,
+                            formatter_class=ArgumentDefaultsHelpFormatter)
+    #TODO: If no arg provided, run on last command 
+    # TODO: How to make this optional?
+    parser.add_argument('command', default='none', help='Command to view or edit')
+    #TODO: Implement
+    parser.add_argument('--edit', '-e', action='store_true', help='Edit command documentation')
+    #TODO: Implement
+    parser.add_argument('--list', '-l', action='store_true', help='List commands documented')
+    #TODO: Implement
+    parser.add_argument('--delete', '-d', action='store_true', help='Delete documentation of a command')
+    #TODO: Implement
+    parser.add_argument('--link', help='Create a linked copy of a command')
+    return parser.parse_args()
+
+
+def is_legal_cmd(command):
+    """Return true if command is legal.
+
+       Commands formats are restricted to being valid file names
+       with no spaces.
+    """
+    legal = True
+    if command == '':
+        legal = False
+    elif len(command.split()) != 1:
+        legal = False
+    return legal
+
+
+def view(f):
+    """View a command's documentation"""
+
+    # TODO: Colorize output (use pygments?)
+    for line in open(f, 'r'):
+        print(line.strip('\n'))
+
+
+def edit(f):
+    """Edit a command's file"""
+    # Get an editor, default to the best one
+    editor = os.getenv('EDITOR', 'vi');
+
+    subprocess.call(shlex.split(f'{editor} {f}'))
+
+    # TODO: Error-checking
+
+
+def confirmed():
+    """Receive a confirm from user"""
+    response = sys.stdin.read(1)
+    return response.lower() == 'y'
+
+def main():
+    """Main driver function"""
+
+    # Parse arguments
+    args = parse_args()
+
+    # Validate $HOME
+    home = os.getenv('HOME')
+    if not os.path.isdir(home):
+        raise FileNotFoundError('$HOME is not defined')
+
+
+    # Ensure $PRN_HOME is created
+    prn_home = os.getenv('PRN_HOME', os.path.join(home, '.prn'))
+    if not os.path.isdir(prn_home):
+        print('Creating directory: ', prn_home)
+        os.makedirs(prn_home)
+
+    #
+    # Check if command is documented
+    #
+
+    command = args.command
+
+    # Make sure command does not contain spaces
+    if not is_legal_cmd(command):
+        raise RuntimeError('Illegal command value: "{0}"'.format(command))
+
+    # Preprocess command into cmd
+    cmd = command.strip()
+
+    cmd_file = '{0}.md'.format(cmd)
+    cmd_path = os.path.join(prn_home, cmd_file)
+
+    cmd_exists = os.path.isfile(cmd_path)
+
+    if args.edit:
+        edit(cmd_path)
+        return 0
+
+    if args.list:
+        if len(os.listdir(prn_home)) == 0:
+            print('No commands documented')
+        else:
+            print('Commands documented:')
+            for (cmd, ext) in [os.path.splitext(f) for f in os.listdir(prn_home)]:
+                print(cmd)
+        return 0
+
+    if args.delete:
+        if not cmd_exists:
+            print(f'No documentation exists for: `{cmd}`')
+        else:
+            print(f'Remove documentation for {cmd}? [y/N]')
+            if confirmed():
+                os.remove(cmd_path)
+        return 0
+
+    #
+    # Base case (no special flags)
+    #
+
+    if cmd_exists:
+        # open file and print it
+        view(cmd_path)
+
+    else:
+        print(f'No documentation exists for: `{cmd}`')
+        print('Would you like to create it? [y/N]')
+
+        if not confirmed():
+            return 0
+
+        # Create file
+        edit(cmd_path)
+
+        if os.path.isfile(cmd_path):
+            print(f'Command documented: `{command}`')
+        else:
+            print('File not saved. No documentation created.')
+
+
+    # TODO: Parse command examples from special syntax (anything in a code block?)
+    # TODO: append command to history via history -s
+    # What is a good command line interface for choosing among options?
+
+
+
+if __name__ == '__main__':
+    ret = main()
+    exit(ret)
